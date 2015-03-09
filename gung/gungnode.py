@@ -21,8 +21,7 @@ class GungNode( QtGui.QGraphicsItem ):
 
         self.name = name
         
-        self.inplugs = []
-        self.outplugs = []
+        self.plugNodes = []
 
         self.draggingNode = None
         self.properties = []
@@ -36,67 +35,51 @@ class GungNode( QtGui.QGraphicsItem ):
         self.resizer.setY(self.nodeHeight  - self.resizer.itemHeight)
 
     def initSettings( self ):
-        self.nodeWidth = 200
-        self.nodeHeight = 150
+        self.nodeWidth = 100
+        self.nodeHeight = 30
         
-        self.minimalWidth = 200
-        self.minimalHeight = 150
+        self.minimalWidth = 100
+        self.minimalHeight = 30
         
     def updateBBox(self):
         self.bboxW = self.nodeWidth
         self.bboxH = self.nodeHeight
-#         self.nodeWidth = Settings().nodeWidth
-#         self.nodeHeight = Settings().nodeHeight
-#         self.plugSize = Settings().plugSize
-        
-        #self.plugSize = Settings().plugSize
-
-        #self.leftBorder = 0
-        #self.rightBorder = self.nodeWidth - self.plugSize
-
-        #self.plugsHeightStart = Settings().plugsHeightStart
-
-        #self.nodeMargin = 2
 
         # move this to some setting section
         self.color = QtGui.QColor(76, 118, 150)
         self.lightGrayBrush = QtGui.QBrush( self.color )
         self.darkGrayBrush = QtGui.QBrush( QtCore.Qt.darkGray )
-        #self.plugsBrush = QtGui.QBrush( Settings().nodePlugsColor )
 
         self.selectedPen = QtGui.QPen( QtGui.QColor(255, 255, 255) )
+        self.selectedPen.setWidth(2)
         self.unselectedPen = QtGui.QPen( QtGui.QColor(58, 57, 57) )
+        self.unselectedPen.setWidth(2)
         self.textPen = QtGui.QPen( QtGui.QColor(255, 255, 255) )
 
         self.plugFont = QtGui.QFont( "Arial", 7 )
-
-    def addInPlug( self, name ):
-        pass
-#         if name.endswith( "_SNAP" ):
-#             plugInColor = QtGui.QColor( 84, 244, 238 )
-#         else:
-#             plugInColor = QtGui.QColor( 238, 244, 84 )
-# 
-#         self.inplugs.append( NatalPlug( name, self, dir="in", plugInColor=plugInColor ) )
-#         self.updatePlugs()
-
-    def addOutPlug( self, name ):
-        pass
-#         if name.endswith( "_snapPoint" ):
-#             plugOutColor = QtGui.QColor( 74, 250, 150 )
-#         else:
-#             plugOutColor = QtGui.QColor( 150, 250, 74 )
-# 
-#         self.outplugs.append( NatalPlug( name, self, dir="out", plugOutColor=plugOutColor ) )
-#         self.updatePlugs()
-
-#     def getPlugByName( self, name ):
-#         result = None
-#         for plugCollection in [self.inplugs, self.outplugs]:
-#             for plug in plugCollection:
-#                 if plug.name == name:
-#                     result = plug
-#         return result
+        
+    def rearrangePlugs(self):
+        currentheight = -1
+        for childitem in self.childItems():
+            if not isinstance(childitem, GungPlug):
+                continue
+            
+            childitem.setX(0)
+            if currentheight == -1:
+                currentheight = childitem.plugHeight
+            
+            currentheight += 3
+            childitem.setX(1)
+            childitem.setY(currentheight)
+            currentheight += childitem.plugHeight
+        
+        if currentheight >= 35:
+            self.minimalHeight = currentheight + 20
+        else:
+            self.minimalHeight = 35 + 20
+        
+        self.nodeHeight = self.minimalHeight
+        self.resizer.setY(self.minimalHeight - self.resizer.itemHeight)
 
     def mousePressEvent( self, event ):
         self.scene().topZ += .001
@@ -107,29 +90,6 @@ class GungNode( QtGui.QGraphicsItem ):
         #if event.pos().y() < 20:
         #    self.scene().emit( QtCore.SIGNAL( "elementRename()" ) )
         return QtGui.QGraphicsItem.mousePressEvent(self, event )
-
-    def updatePlugs( self ):
-        plug = None
-        inout = 0
-
-        # place the plugs on right and left
-        for plugCollection in [self.inplugs, self.outplugs]:
-            indx = 0
-
-#            for plug in sorted( plugCollection, key=lambda sorted: str( sorted.name ) ):
-            for plug in plugCollection:
-                plug.setX( inout * self.rightBorder )
-                plug.setY( self.plugsHeightStart + ( ( self.plugSize * 2 ) * indx ) )
-                indx += 1
-            inout += 1
-
-            # Set height of node
-            plugsHeight = self.plugsHeightStart + ( len( plugCollection ) * ( self.plugSize * 2 ) )
-            if self.nodeHeight < plugsHeight:
-                self.nodeHeight = plugsHeight
-
-        #repaint node
-        self.update()
 
     def setName( self, newname ):
         self.name = newname
@@ -178,51 +138,37 @@ class GungNode( QtGui.QGraphicsItem ):
             painter.setPen( self.unselectedPen )
 
         painter.setBrush( self.darkGrayBrush )
-        painter.drawRoundedRect( 0, 0, self.nodeWidth, self.nodeHeight, 5, 5 )
+        painter.drawRect( 0, 0, self.nodeWidth - 1 , self.nodeHeight - 1 )
 
         # draw name of an element
-        #painter.setBrush( self.plugsBrush )
         painter.setPen( self.textPen )
         painter.drawText( 5, 15, self.name )
 
-        # draw inplugs and outplugs labels
-#         painter.setFont( self.plugFont )
-#         for inPlug in self.inplugs:
-#             painter.drawText( int( self.plugSize + self.nodeMargin ),
-#                               int( inPlug.y() - self.nodeMargin ),
-#                               int( self.nodeWidth / 2 ),
-#                               int( inPlug.y() + self.plugSize ),
-#                               QtCore.Qt.AlignLeft,
-#                               inPlug.getNameWithoutNamespace() )
-# 
-#         for outPlug in self.outplugs:
-#             painter.drawText( int( self.nodeWidth / 2 ),
-#                               int( outPlug.y() - self.nodeMargin ),
-#                               int( ( self.nodeWidth / 2 ) - self.plugSize - self.nodeMargin ),
-#                               int( outPlug.y() + self.plugSize ),
-#                               QtCore.Qt.AlignRight,
-#                               outPlug.getNameWithoutNamespace() )
-
-    def rename( self, newName, namespace ):
-        self.setName( str( newName ) )
-        self.setNamespace( namespace )
-        for p in self.inplugs + self.outplugs:
-            p.rename( namespace )
-
-    def remove( self ):
-        for plug in self.inplugs:
-            plug.remove()
-            self.scene().removeItem( plug )
-
-        for plug in self.outplugs:
-            plug.remove()
-            self.scene().removeItem( plug )
-
-        self.inplugs = []
-        self.outplugs = []
-
     def boundingRect( self ):
         return QtCore.QRectF( -1, -1, self.bboxW + 1, self.bboxH + 1 )
+
+
+class GungPlug( QtGui.QGraphicsItem ):
+    def __init__( self, parent=None, scene=None):
+        QtGui.QGraphicsItem.__init__(self, parent=parent, scene=scene )
+        
+        self.plugWidth = 15
+        self.plugHeight = 15
+        
+        self.plugPen = QtGui.QPen(QtGui.QColor(200,200,200))
+        self.plugPen.setWidth(2)
+        self.plugBrush = QtGui.QBrush(QtGui.QColor(200,200,200))
+        
+    def paint( self, painter, option, widget=None ):
+        painter.setRenderHint( QtGui.QPainter.Antialiasing )
+
+        painter.setPen( self.plugPen )
+    
+        painter.setBrush( self.plugBrush )
+        painter.drawRect( 1, 1, self.plugWidth - 1 , self.plugHeight - 1 )
+    
+    def boundingRect(self, *args, **kwargs):
+        return QtCore.QRectF( -1,-1, self.plugWidth + 1, self.plugHeight + 1 )
 
 
 class GungNodeResizer( QtGui.QGraphicsItem ):
