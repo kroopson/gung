@@ -60,6 +60,16 @@ class GungNode(GungItem):
         self.createResizer()
         self.updateBBox()
 
+    def requestMinimumWidth(self, minimumWidth):
+        if self.minimalWidth < minimumWidth:
+            self.minimalWidth = minimumWidth
+
+        if self.nodeWidth < minimumWidth:
+            self.nodeWidth = minimumWidth
+
+        if self.resizer.pos().x() < minimumWidth:
+            self.resizer.setX(minimumWidth)
+
     def createResizer(self):
         """
         Adds a special type of child item that will control the size of this node.
@@ -189,8 +199,11 @@ class GungAttribute(GungItem):
             w = index * p.plugWidth
             p.setX(w)
             p.setY(0)
-            totalWidth += w
+            totalWidth += p.plugWidth
             index += 1
+
+        if isinstance(self.parentItem(), GungNode):
+            self.parentItem().requestMinimumWidth(totalWidth)
 
     def boundingRect(self):
         """
@@ -204,26 +217,26 @@ class GungPlug(GungItem):
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
-        self.plugWidth = 10
-        self.plugHeight = 10
+        self.plugWidth = 14
+        self.plugHeight = 14
 
-        self.plugPen = QtGui.QPen(QtGui.QColor(200, 200, 200))
-        self.plugPen.setWidth(2)
-        self.plugBrush = QtGui.QBrush(QtGui.QColor(200, 200, 200))
+        plugColor = QtGui.QColor(150, 255, 150)
+
+        self.plugPen = QtGui.QPen(plugColor.lighter())
+
+        self.plugBrush = QtGui.QBrush(plugColor)
 
     def paint(self, painter, option, widget=None):
         """
         Override this method to give your plugs a custom look.
         """
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-
         painter.setPen(self.plugPen)
 
         painter.setBrush(self.plugBrush)
         painter.drawRect(1, 1, self.plugWidth - 1, self.plugHeight - 1)
 
     def boundingRect(self, *args, **kwargs):
-        return QtCore.QRectF( -1,-1, self.plugWidth + 1, self.plugHeight + 1 )
+        return QtCore.QRectF(-1, -1, self.plugWidth + 1, self.plugHeight + 1)
 
 
 class GungNodeResizer(QtGui.QGraphicsItem):

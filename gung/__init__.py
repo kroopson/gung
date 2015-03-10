@@ -54,8 +54,8 @@ if __name__ == "__main__":
         #a = GungAttribute(node, scene)
         for p in range(int(randrange(0, 5))):
             a = GungAttribute(node, scene)
-        # for p in range(int(randrange(0,5))):
-            plug = GungPlug(a, scene)
+            for p in range(int(randrange(0, 15))):
+                plug = GungPlug(a, scene)
             a.rearrangePlugs()
         node.rearrangeAttributes()
     w.show()

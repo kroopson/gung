@@ -1,5 +1,5 @@
 from PySide import QtGui, QtCore
-
+from gungnode import GungNode
 QString = str
 versionString = "GUNG v.0.0.1"
 
@@ -120,6 +120,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if len(selItems) > 0:
             zoomRect = QtCore.QRectF()
             for item in selItems:
+                if not isinstance(item, GungNode):
+                    continue
                 itemrect = item.boundingRect()
                 zoomRect = zoomRect.united(itemrect.translated(item.x(), item.y()))
 
