@@ -4,19 +4,36 @@ from PySide.QtCore import QPoint, QPointF
 
 
 class GungItem(QtGui.QGraphicsItem):
+    elementType = "GungNode"
+    
     """
     Base class for all major GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
     that will be used later in every important operation (especially during the connection of the plugs, undo/redo,
     save/load)
     """
-    def __init__(self, parent=None, scene=None):
+    def __init__(self, parent=None, scene=None, nodeId=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
         self.id_ = None
-
-        self.id_ = self.scene().getNewId()
+        
+        self.properties = {}
+        
+        if nodeId is None:
+            nodeId = self.scene().getNewId()
+            
+        self.properties["nodeId"] = nodeId
+        
+    def asXml(self, document):
+        element = document.createElement(self.elementType)
+        
+        self.properties["posX"] = self.pos().x()
+        self.properties["posY"] = self.pos().y()
+        
+        for p in self.properties.keys():
+            element.setAttribute(p, str(self.properties[p]))
 
 
 class GungNode(GungItem):
+    elementType = "GungNode"
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
     """
@@ -55,7 +72,7 @@ class GungNode(GungItem):
         self.plugNodes = []
 
         self.draggingNode = None
-        self.properties = []
+        #self.properties = []
 
         self.createResizer()
         self.updateBBox()
@@ -170,6 +187,7 @@ class GungNode(GungItem):
 
 
 class GungAttribute(GungItem):
+    elementType = "GungAttribute"
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent, scene)
 
@@ -214,6 +232,7 @@ class GungAttribute(GungItem):
 
 
 class GungPlug(GungItem):
+    elementType = "GungPlug"
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 

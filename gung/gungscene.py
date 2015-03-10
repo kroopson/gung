@@ -12,7 +12,10 @@ class GungScene(QGraphicsScene):
         for item in self.items():
             if not isinstance(item, GungItem):
                 continue
-            currentIds.append(item.id_)
+            if not "nodeId" in item.properties.keys():
+                continue
+            
+            currentIds.append(item.properties["nodeId"])
 
         while index in currentIds:
             index += 1
@@ -23,6 +26,6 @@ class GungScene(QGraphicsScene):
         for item in self.items():
             if not isinstance(item, GungItem):
                 continue
-            if item.id_ == id_:
+            if item.properties["nodeId"] == id_:
                 return item
         return None
