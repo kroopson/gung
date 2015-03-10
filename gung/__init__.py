@@ -29,6 +29,7 @@ from gungview import GungGraphicsView
 from gungscene import GungScene
 from gungnode import GungNode, GungPlug, GungAttribute
 
+
 from random import randrange
 
 
@@ -54,8 +55,8 @@ if __name__ == "__main__":
         #a = GungAttribute(node, scene)
         for p in range(int(randrange(0, 5))):
             a = GungAttribute(node, scene)
-            for p in range(int(randrange(0, 15))):
-                plug = GungPlug(a, scene)
+            #for p in range(int(randrange(0, 15))):
+            plug = GungPlug(a, scene)
             a.rearrangePlugs()
         node.rearrangeAttributes()
     w.show()
