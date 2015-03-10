@@ -6,7 +6,8 @@ from PySide.QtCore import QPoint, QPointF
 class GungItem(QtGui.QGraphicsItem):
     """
     Base class for all major GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
-    that will be used later on in every important operation (especially during the connection of the plugs etc.
+    that will be used later in every important operation (especially during the connection of the plugs, undo/redo,
+    save/load)
     """
     def __init__(self, parent=None, scene=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
@@ -19,7 +20,7 @@ class GungNode(GungItem):
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
     """
-    def __init__( self, name, parent=None, scene=None):
+    def __init__(self, name, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
         self.resizer = None
@@ -27,6 +28,7 @@ class GungNode(GungItem):
         self.nodeHeight = 0
         self.minimalHeight = 0
 
+        # TODO: settings file implementation
         # move this to some setting section
         self.color = QtGui.QColor(76, 118, 150)
         self.lightGrayBrush = QtGui.QBrush(self.color)
@@ -43,10 +45,10 @@ class GungNode(GungItem):
         # Initialize settings
         self.initSettings()
 
-        self.setFlag( QtGui.QGraphicsItem.ItemIsMovable, True )
-        self.setFlag( QtGui.QGraphicsItem.ItemIsSelectable, True )
-        self.setFlag( QtGui.QGraphicsItem.ItemClipsToShape, True )
-        self.setFlag( QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemClipsToShape, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
 
         self.name = name
 
@@ -78,20 +80,19 @@ class GungNode(GungItem):
         self.bboxW = self.nodeWidth
         self.bboxH = self.nodeHeight
 
-    def rearrangePlugs(self):
+    def rearrangeAttributes(self):
         currentheight = -1
         for childitem in self.childItems():
-            if not isinstance(childitem, GungPlug):
+            if not isinstance(childitem, GungAttribute):
                 continue
 
             childitem.setX(0)
             if currentheight == -1:
-                currentheight = childitem.plugHeight
+                currentheight = 20
 
-            currentheight += 3
             childitem.setX(1)
             childitem.setY(currentheight)
-            currentheight += childitem.plugHeight
+            currentheight += childitem.attrHeight + 2
 
         if currentheight >= 35:
             self.minimalHeight = currentheight + 20
@@ -111,7 +112,7 @@ class GungNode(GungItem):
         #    self.scene().emit( QtCore.SIGNAL( "elementRename()" ) )
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
-    def getSize( self ):
+    def getSize(self):
         sizeX = self.nodeWidth
 
         plugsCount = len(self.outplugs)
@@ -167,37 +168,66 @@ class GungAttribute(GungItem):
 
         self.attrHeight = 15
 
+    def paint(self, painter, option, widget=None):
+        painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
+        painter.drawRect(self.boundingRect())
+
+    def rearrangePlugs(self):
+        plugs = []
+        for childitem in self.childItems():
+            if not isinstance(childitem, GungPlug):
+                continue
+            plugs.append(childitem)
+
+        if not len(plugs):
+            return
+
+        index = 0
+        totalWidth = 0
+        for p in plugs:
+            w = index * p.plugWidth
+            p.setX(w)
+            p.setY(0)
+            totalWidth += w
+            index += 1
+
     def boundingRect(self):
-        return QtCore.QRectF(0, 0, self.parentItem().nodeWidth, self.parentItem().attrHeight)
+        """
+        Override this in child classes.
+        """
+
+        return QtCore.QRectF(0, 0, self.parentItem().nodeWidth - 4, self.attrHeight)
+
 
 class GungPlug(GungItem):
-    def __init__( self, parent=None, scene=None):
+    def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
-        self.plugWidth = 15
-        self.plugHeight = 15
+        self.plugWidth = 10
+        self.plugHeight = 10
 
-        self.plugPen = QtGui.QPen(QtGui.QColor(200,200,200))
+        self.plugPen = QtGui.QPen(QtGui.QColor(200, 200, 200))
         self.plugPen.setWidth(2)
-        self.plugBrush = QtGui.QBrush(QtGui.QColor(200,200,200))
+        self.plugBrush = QtGui.QBrush(QtGui.QColor(200, 200, 200))
 
     def paint(self, painter, option, widget=None):
         """
         Override this method to give your plugs a custom look.
         """
-        painter.setRenderHint( QtGui.QPainter.Antialiasing )
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        painter.setPen( self.plugPen )
+        painter.setPen(self.plugPen)
 
-        painter.setBrush( self.plugBrush )
-        painter.drawRect( 1, 1, self.plugWidth - 1 , self.plugHeight - 1 )
+        painter.setBrush(self.plugBrush)
+        painter.drawRect(1, 1, self.plugWidth - 1, self.plugHeight - 1)
 
     def boundingRect(self, *args, **kwargs):
         return QtCore.QRectF( -1,-1, self.plugWidth + 1, self.plugHeight + 1 )
 
 
 class GungNodeResizer(QtGui.QGraphicsItem):
-    def __init__( self, parent=None, scene=None):
+    def __init__(self, parent=None, scene=None):
         QtGui.QGraphicsItem.__init__(self, parent=parent, scene=scene)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
