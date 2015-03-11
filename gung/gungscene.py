@@ -31,9 +31,7 @@ class GungScene(QGraphicsScene):
             if item.properties["nodeId"] == id_:
                 return item
         return None
-    
-    ##
-    #  
+
     def asXml(self):
         """
         Returns self as an xml document.

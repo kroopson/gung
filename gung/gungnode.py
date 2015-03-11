@@ -1,15 +1,15 @@
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
-from PySide.QtCore import QPoint, QPointF
+from PySide.QtCore import QPoint
 
 
 class GungItem(QtGui.QGraphicsItem):
     elementType = "GungNode"
     
     """
-    Base class for all major GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
+    Base class for all GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
     that will be used later in every important operation (especially during the connection of the plugs, undo/redo,
-    save/load)
+    save/load). The utility items like resizer are not considered as a GUNG items.
     """
     def __init__(self, parent=None, scene=None, nodeId=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
@@ -23,6 +23,9 @@ class GungItem(QtGui.QGraphicsItem):
         self.properties["nodeId"] = nodeId
         
     def asXml(self, document):
+        """
+        Returns this item and all its sub items as an xml element.
+        """
         element = document.createElement(self.elementType)
         
         self.properties["posX"] = self.pos().x()
@@ -145,23 +148,7 @@ class GungNode(GungItem):
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
-        # if event.pos().y() < 20:
-        #    self.scene().emit( QtCore.SIGNAL( "elementRename()" ) )
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
-
-    def getSize(self):
-        sizeX = self.properties['nodeWidth']
-
-        plugsCount = len(self.outplugs)
-        if len(self.inplugs) > len(self.outplugs):
-            plugsCount = len(self.inplugs)
-
-        sizeY = self.plugsHeightStart + (self.plugSize * plugsCount)
-
-        for prop in self.properties:
-            sizeY += prop.getSizeY()
-
-        return QtCore.QRectF(0, 0, sizeX, sizeY)
 
     def setSize(self, size):
         growing = False
@@ -200,9 +187,6 @@ class GungAttribute(GungItem):
     elementType = "GungAttribute"
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent, scene)
-
-        # This list is supposed to hold the plugs for those attributes
-        self.plugs = []
 
         self.properties['attrHeight'] = 15
 
