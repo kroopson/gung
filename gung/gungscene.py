@@ -49,5 +49,5 @@ class GungScene(QGraphicsScene):
                 
                 xmlnode = node.asXml(doc)
                 doc.documentElement.appendChild(xmlnode)
-                
+                sc = node.scene()  # I don't know why it's corrupted without it...
         return doc

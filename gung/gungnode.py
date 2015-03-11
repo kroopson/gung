@@ -30,6 +30,13 @@ class GungItem(QtGui.QGraphicsItem):
         
         for p in self.properties.keys():
             element.setAttribute(p, str(self.properties[p]))
+
+        for item in self.childItems():
+            if not isinstance(item, GungItem):
+                continue
+            item_element = item.asXml(document)
+            element.appendChild(item_element)
+
         return element
 
 
@@ -42,12 +49,13 @@ class GungNode(GungItem):
         GungItem.__init__(self, parent=parent, scene=scene)
 
         self.resizer = None
-        self.nodeWidth = 0
-        self.nodeHeight = 0
-        self.minimalHeight = 0
+
+        self.properties['nodeWidth'] = 0.0
+        self.properties['nodeHeight'] = 0.0
+        self.properties['minimalWidth'] = 0.0
+        self.properties['minimalHeight'] = 0.0
 
         # TODO: settings file implementation
-        # move this to some setting section
         self.color = QtGui.QColor(76, 118, 150)
         self.lightGrayBrush = QtGui.QBrush(self.color)
         self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
@@ -67,23 +75,23 @@ class GungNode(GungItem):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemClipsToShape, True)
         self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges, True)
 
         self.name = name
 
         self.plugNodes = []
 
         self.draggingNode = None
-        #self.properties = []
 
         self.createResizer()
         self.updateBBox()
 
     def requestMinimumWidth(self, minimumWidth):
-        if self.minimalWidth < minimumWidth:
-            self.minimalWidth = minimumWidth
+        if self.properties['minimalWidth'] < minimumWidth:
+            self.properties['minimalWidth'] = minimumWidth
 
-        if self.nodeWidth < minimumWidth:
-            self.nodeWidth = minimumWidth
+        if self.properties['nodeWidth'] < minimumWidth:
+            self.properties['nodeWidth'] = minimumWidth
 
         if self.resizer.pos().x() < minimumWidth:
             self.resizer.setX(minimumWidth)
@@ -94,19 +102,20 @@ class GungNode(GungItem):
         This is a typical behaviour of a node systems, that allows you to resize the nodes with a small widget.
         """
         self.resizer = GungNodeResizer(self, self.scene())
-        self.resizer.setX(self.nodeWidth - self.resizer.itemWidth)
-        self.resizer.setY(self.nodeHeight - self.resizer.itemHeight)
+        self.resizer.setX(self.properties['nodeWidth'] - self.resizer.itemWidth)
+        self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
 
     def initSettings(self):
-        self.nodeWidth = 100
-        self.nodeHeight = 30
+        # TODO: make this loaded from config
+        self.properties['nodeWidth'] = 100
+        self.properties['nodeHeight'] = 30
 
-        self.minimalWidth = 100
-        self.minimalHeight = 30
+        self.properties['minimalWidth'] = 0.0
+        self.properties['minimalHeight'] = 0.0
 
     def updateBBox(self):
-        self.bboxW = self.nodeWidth
-        self.bboxH = self.nodeHeight
+        self.bboxW = self.properties['nodeWidth']
+        self.bboxH = self.properties['nodeHeight']
 
     def rearrangeAttributes(self):
         currentheight = -1
@@ -120,15 +129,15 @@ class GungNode(GungItem):
 
             childitem.setX(1)
             childitem.setY(currentheight)
-            currentheight += childitem.attrHeight + 2
+            currentheight += childitem.properties['attrHeight'] + 2
 
         if currentheight >= 35:
-            self.minimalHeight = currentheight + 20
+            self.properties['minimalHeight'] = currentheight + 20
         else:
-            self.minimalHeight = 35 + 20
+            self.properties['minimalHeight'] = 35 + 20
 
-        self.nodeHeight = self.minimalHeight
-        self.resizer.setY(self.minimalHeight - self.resizer.itemHeight)
+        self.properties['nodeHeight'] = self.properties['minimalHeight']
+        self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
 
     def mousePressEvent(self, event):
         self.scene().topZ += .001
@@ -141,7 +150,7 @@ class GungNode(GungItem):
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def getSize(self):
-        sizeX = self.nodeWidth
+        sizeX = self.properties['nodeWidth']
 
         plugsCount = len(self.outplugs)
         if len(self.inplugs) > len(self.outplugs):
@@ -156,11 +165,11 @@ class GungNode(GungItem):
 
     def setSize(self, size):
         growing = False
-        if size.x() >= self.nodeWidth or size.y() >= self.nodeHeight:
+        if size.x() >= self.properties['nodeWidth'] or size.y() >= self.properties['nodeHeight']:
             growing = True
 
-        self.nodeWidth = size.x()
-        self.nodeHeight = size.y()
+        self.properties['nodeWidth'] = size.x()
+        self.properties['nodeHeight'] = size.y()
         self.update()
 
         self.updateBBox()
@@ -177,7 +186,7 @@ class GungNode(GungItem):
             painter.setPen(self.unselectedPen)
 
         painter.setBrush(self.darkGrayBrush)
-        painter.drawRect(0, 0, self.nodeWidth - 1, self.nodeHeight - 1)
+        painter.drawRect(0, 0, self.properties['nodeWidth'] - 1, self.properties['nodeHeight'] - 1)
 
         # draw name of an element
         painter.setPen(self.textPen)
@@ -195,7 +204,7 @@ class GungAttribute(GungItem):
         # This list is supposed to hold the plugs for those attributes
         self.plugs = []
 
-        self.attrHeight = 15
+        self.properties['attrHeight'] = 15
 
     def paint(self, painter, option, widget=None):
         painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
@@ -215,10 +224,10 @@ class GungAttribute(GungItem):
         index = 0
         totalWidth = 0
         for p in plugs:
-            w = index * p.plugWidth
+            w = index * p.properties['plugWidth']
             p.setX(w)
             p.setY(0)
-            totalWidth += p.plugWidth
+            totalWidth += p.properties['plugWidth']
             index += 1
 
         if isinstance(self.parentItem(), GungNode):
@@ -229,7 +238,7 @@ class GungAttribute(GungItem):
         Override this in child classes.
         """
 
-        return QtCore.QRectF(0, 0, self.parentItem().nodeWidth - 4, self.attrHeight)
+        return QtCore.QRectF(0, 0, self.parentItem().properties['nodeWidth'] - 4, self.properties['attrHeight'])
 
 
 class GungPlug(GungItem):
@@ -237,8 +246,8 @@ class GungPlug(GungItem):
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
-        self.plugWidth = 14
-        self.plugHeight = 14
+        self.properties['plugWidth'] = 14
+        self.properties['plugHeight'] = 14
 
         plugColor = QtGui.QColor(150, 255, 150)
 
@@ -253,10 +262,10 @@ class GungPlug(GungItem):
         painter.setPen(self.plugPen)
 
         painter.setBrush(self.plugBrush)
-        painter.drawRect(1, 1, self.plugWidth - 1, self.plugHeight - 1)
+        painter.drawRect(1, 1, self.properties['plugWidth'] - 1, self.properties['plugHeight'] - 1)
 
     def boundingRect(self, *args, **kwargs):
-        return QtCore.QRectF(-1, -1, self.plugWidth + 1, self.plugHeight + 1)
+        return QtCore.QRectF(-1, -1, self.properties['plugWidth'] + 1, self.properties['plugHeight'] + 1)
 
 
 class GungNodeResizer(QtGui.QGraphicsItem):
@@ -301,8 +310,8 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            parentMinWidth = self.parentItem().minimalWidth - self.itemWidth
-            parentMinHeight = self.parentItem().minimalHeight - self.itemHeight
+            parentMinWidth = self.parentItem().properties['minimalWidth'] - self.itemWidth
+            parentMinHeight = self.parentItem().properties['minimalWidth'] - self.itemHeight
 
             if value.x() < parentMinWidth:
                 value.setX(parentMinWidth)

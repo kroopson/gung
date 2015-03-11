@@ -62,8 +62,8 @@ if __name__ == "__main__":
     
     w.show()
     
-    #xml = scene.asXml()
-    #print xml.toprettyxml("    ")
+    xml = scene.asXml()
+    print xml.toprettyxml("    ")
     
     app.exec_()
     sys.exit(0)
