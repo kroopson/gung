@@ -59,6 +59,11 @@ if __name__ == "__main__":
             plug = GungPlug(a, scene)
             a.rearrangePlugs()
         node.rearrangeAttributes()
+    
     w.show()
+    
+    #xml = scene.asXml()
+    #print xml.toprettyxml("    ")
+    
     app.exec_()
     sys.exit(0)

@@ -30,6 +30,7 @@ class GungItem(QtGui.QGraphicsItem):
         
         for p in self.properties.keys():
             element.setAttribute(p, str(self.properties[p]))
+        return element
 
 
 class GungNode(GungItem):

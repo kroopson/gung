@@ -1,5 +1,7 @@
 from PySide.QtGui import QGraphicsScene
-from gungnode import GungItem
+from gungnode import GungItem, GungNode
+
+import xml.dom.minidom as xmldom
 
 class GungScene(QGraphicsScene):
     def __init__(self, parent=None):
@@ -29,3 +31,23 @@ class GungScene(QGraphicsScene):
             if item.properties["nodeId"] == id_:
                 return item
         return None
+    
+    ##
+    #  
+    def asXml(self):
+        """
+        Returns self as an xml document.
+        """
+        impl = xmldom.getDOMImplementation()
+        doc = impl.createDocument(None, "GungGraph", None)
+
+        for node in self.items():
+            
+            if isinstance(node, GungNode):
+                if not node.parentItem() is None:
+                    continue
+                
+                xmlnode = node.asXml(doc)
+                doc.documentElement.appendChild(xmlnode)
+                
+        return doc
