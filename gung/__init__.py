@@ -27,7 +27,7 @@ from PySide import QtGui, QtCore
 
 from gungview import GungGraphicsView
 from gungscene import GungScene
-from gungnode import GungNode, GungPlug, GungAttribute
+from gungnode import GungNode, GungPlug, GungAttribute, GungEdge
 
 
 from random import randrange
@@ -154,6 +154,10 @@ if __name__ == "__main__":
 #             a.rearrangePlugs()
 #         node.rearrangeAttributes()
      
+    e = GungEdge(scene=scene)
+    e.properties['itemFromId'] = 19
+    e.properties['itemToId'] = 33
+    e.reconnectEdge()
     w.show()
     
     xml = scene.asXml()

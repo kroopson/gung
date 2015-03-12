@@ -10,6 +10,7 @@ class GungScene(QGraphicsScene):
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
         self.topZ = 0.0000
+        self.topEdgeZ = 1.0000
 
     def getNewId(self):
         index = 0

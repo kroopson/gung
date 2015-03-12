@@ -164,9 +164,9 @@ class GungNode(GungItem):
             currentheight += childitem.properties['attrHeight'] + 2
 
         if currentheight >= 35:
-            self.properties['minimalHeight'] = currentheight + 20
+            self.properties['minimalHeight'] = currentheight + 20.0
         else:
-            self.properties['minimalHeight'] = 35 + 20
+            self.properties['minimalHeight'] = 35 + 20.0
 
         self.properties['nodeHeight'] = self.properties['minimalHeight']
         self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
@@ -181,8 +181,8 @@ class GungNode(GungItem):
     
     def fromXml(self, xmlnode):
         GungItem.fromXml(self, xmlnode)
-        self.resizer.setX(self.properties['nodeWidth'])
-        self.resizer.setY(self.properties['nodeHeight'])
+        self.resizer.setX(self.properties['nodeWidth'] - self.resizer.itemWidth)
+        self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
 
     def setSize(self, size):
         growing = False
@@ -264,14 +264,18 @@ class GungPlug(GungItem):
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
-        self.properties['plugWidth'] = 14
-        self.properties['plugHeight'] = 14
+        self.properties['plugWidth'] = 14.0
+        self.properties['plugHeight'] = 14.0
 
         plugColor = QtGui.QColor(150, 255, 150)
 
         self.plugPen = QtGui.QPen(plugColor.lighter())
 
         self.plugBrush = QtGui.QBrush(plugColor)
+        
+        self.edges = []
+        
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
     
     def mousePressEvent(self, event):
         print "Starting to drag!"
@@ -289,7 +293,96 @@ class GungPlug(GungItem):
 
     def boundingRect(self, *args, **kwargs):
         return QtCore.QRectF(-1, -1, self.properties['plugWidth'] + 1, self.properties['plugHeight'] + 1)
+    
+    def itemChange(self, change, value):
+        """
+        Called whenever a change happens to the instance of this class like move, click, resize ect.
+        In this case used to resize the parent node and to limit the position to the minimal size constraints
+        of a node.
+        :param change: defines a type of a change
+        :param value: defines a value of a change
+        :return: QVariant
+        """
+        
+        if change == QtGui.QGraphicsItem.ItemScenePositionHasChanged:
+            for edge in self.edges:
+                if edge is None:
+                    continue
+                edge.updatePosition()
 
+        return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+
+class GungEdge(GungItem):
+    def __init__(self, parent=None, scene=None):
+        GungItem.__init__(self, None, scene)
+        
+        self.properties['itemFromId'] = -1
+        self.properties['itemToId'] = -1
+        
+        self.itemFrom = None
+        self.itemTo = None
+        
+        self.edgePen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.setZValue(self.scene().topEdgeZ)
+        self.scene().topEdgeZ += .0001
+    
+    def reconnectEdge(self):
+        if not self.properties['itemFromId'] == -1 and not self.properties['itemFromId'] == self.properties['nodeId']:
+            self.itemFrom = self.scene().getNodeById(int(self.properties['itemFromId']))
+            if not self.itemFrom is None:
+                self.itemFrom.edges.append(self)
+        if not self.properties['itemToId'] == -1 and not self.properties['itemToId'] == self.properties['nodeId']:
+            self.itemTo = self.scene().getNodeById(int(self.properties['itemToId']))
+            if not self.itemTo is None:
+                self.itemTo.edges.append(self)
+        self.update()
+        
+    def paint(self, painter, option, widget=None):
+        painter.setPen(self.edgePen)
+
+        if self.itemFrom is None or self.itemTo is None:
+            return 
+        
+        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
+        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        
+        topleftX = min(posStart.x(), posEnd.x())
+        topleftY = min(posStart.y(), posEnd.y())
+        
+        bottomrightX = max(posStart.x(), posEnd.x())
+        bottomrightY = max(posStart.y(), posEnd.y())
+        
+        currentpos = self.mapToScene(QtCore.QPointF())
+        
+        painter.drawLine(posStart - currentpos, posEnd - currentpos )
+    
+    def updatePosition(self):
+        if self.itemFrom is None or self.itemTo is None:
+            return
+        
+        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
+        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        
+        topleftX = min(posStart.x(), posEnd.x())
+        topleftY = min(posStart.y(), posEnd.y())
+        
+        self.setPos(QtCore.QPointF(topleftX, topleftY))
+    
+    def boundingRect(self, *args, **kwargs):
+        if self.itemFrom is None or self.itemTo is None:
+            return QtCore.QRectF()
+        
+        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
+        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        
+        topleftX = min(posStart.x(), posEnd.x())
+        topleftY = min(posStart.y(), posEnd.y())
+        
+        bottomrightX = max(posStart.x(), posEnd.x())
+        bottomrightY = max(posStart.y(), posEnd.y())
+
+        return QtCore.QRectF(0, 0, bottomrightX - topleftX, bottomrightY - topleftY)
 
 class GungNodeResizer(QtGui.QGraphicsItem):
     def __init__(self, parent=None, scene=None):
