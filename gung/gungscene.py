@@ -1,16 +1,70 @@
-from PySide.QtGui import QGraphicsScene
+from PySide import QtGui
+from PySide.QtGui import QGraphicsScene, QGraphicsItem
+from PySide.QtCore import Signal, QPointF, QRectF
 
-from gungnode import GungItem, GungNode, getGungNodeClasses
+from gungnode import GungItem, GungNode, GungEdge, getGungNodeClasses
 
 import xml.dom.minidom as xmldom
 from xml.dom import Node
 
 
+class GungDragEdge(QGraphicsItem):
+    def __init__(self, scene=None):
+        QGraphicsItem.__init__(self, None, scene)
+
+        self.edgePen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.setZValue(2.000)
+
+        self.posStart = None
+        self.posEnd = None
+
+    def paint(self, painter, option, widget=None):
+        if not self.scene().isDragging:
+            return
+
+        painter.setPen(self.edgePen)
+
+        if self.posStart is None or self.posEnd is None:
+            return
+
+        currentpos = self.mapToScene(QPointF())
+
+        painter.drawLine(self.posStart - currentpos, self.posEnd - currentpos )
+
+    def updatePosition(self):
+        if self.posStart is None or self.posEnd is None:
+            return
+
+        topleftX = min(self.posStart.x(), self.posEnd.x())
+        topleftY = min(self.posStart.y(), self.posEnd.y())
+
+        self.setPos(QPointF(topleftX, topleftY))
+        self.update()
+
+    def boundingRect(self, *args, **kwargs):
+        if not self.scene().isDragging:
+            return QRectF()
+
+        if self.posStart is None or self.posEnd is None:
+            return QRectF()
+
+        topleftX = min(self.posStart.x(), self.posEnd.x())
+        topleftY = min(self.posStart.y(), self.posEnd.y())
+
+        bottomrightX = max(self.posStart.x(), self.posEnd.x())
+        bottomrightY = max(self.posStart.y(), self.posEnd.y())
+
+        return QRectF(0, 0, bottomrightX - topleftX, bottomrightY - topleftY)
+
 class GungScene(QGraphicsScene):
+    draggingStarted = Signal(int)
+
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
         self.topZ = 0.0000
         self.topEdgeZ = 1.0000
+        self.isDragging = False
+        self.createDraggingEdge()
 
     def getNewId(self):
         index = 0
@@ -71,3 +125,35 @@ class GungScene(QGraphicsScene):
             gn = classes[node.tagName](parent=None, scene=self)
             gn.fromXml(node)
 
+        for i in self.items():
+            if not isinstance(i, GungEdge):
+                continue
+            i.reconnectEdge()
+
+    def createDraggingEdge(self):
+        self.draggingEdge = GungDragEdge(scene=self)
+
+    def initDraggingEdge(self, dragStart):
+        """
+        Starts the dragging and sets the start position of a dragged edge.
+        :param dragStart: QPointF
+        :return:
+        """
+        """
+        :param dragStart:
+        :return:
+        """
+        #self.
+        self.isDragging = True
+        self.draggingEdge.posStart = dragStart
+        self.draggingEdge.posEnd = dragStart
+        self.draggingEdge.update()
+
+    def updateDraggingEdge(self, pos):
+        self.draggingEdge.posEnd = pos
+        self.draggingEdge.updatePosition()
+
+    def hideDraggingEdge(self):
+        self.isDragging = False
+        self.draggingEdge.posStart = None
+        self.draggingEdge.posEnd = None

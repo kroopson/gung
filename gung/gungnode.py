@@ -280,6 +280,11 @@ class GungPlug(GungItem):
     def mousePressEvent(self, event):
         print "Starting to drag!"
         event.accept()
+
+        self.scene().initDraggingEdge(self.mapToScene(event.pos()))
+
+        self.scene().draggingStarted.emit(int(self.properties['nodeId']))
+
         #return GungItem.mousePressEvent(self, event)
 
     def paint(self, painter, option, widget=None):

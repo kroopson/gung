@@ -1,9 +1,9 @@
 import unittest
 from PySide import QtGui
 
-from gungview import GungGraphicsView
-from gungscene import GungScene
-from gungnode import GungNode, GungPlug, GungAttribute
+from gung.gungview import GungGraphicsView
+from gung.gungscene import GungScene
+from gung.gungnode import GungNode, GungPlug, GungAttribute, GungEdge
 from PySide.QtGui import QApplication
 
 
@@ -58,10 +58,10 @@ class TestSequenceFunctions(unittest.TestCase):
                 a.rearrangePlugs()
             node.rearrangeAttributes()
         
-        gungnodes = []
-        for i in scene.items():
-            if isinstance(i, GungNode):
-                gungnodes.append(i)
+        e = GungEdge(scene=scene)
+        e.properties['itemFromId'] = 19
+        e.properties['itemToId'] = 33
+        e.reconnectEdge()
         
         scenexml = scene.asXml()
         

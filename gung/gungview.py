@@ -1,7 +1,10 @@
 from PySide import QtGui, QtCore
+from PySide.QtCore import Slot, QMimeData
+from PySide.QtGui import QDrag
 from gungnode import GungNode
+from gungscene import GungScene
 QString = str
-versionString = "GUNG v.0.0.1"
+versionString = "GUNG v.0.0.2"
 
 class GungGraphicsView(QtGui.QGraphicsView):
 
@@ -86,14 +89,12 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def wheelEvent(self, event):
         delta = event.delta()
-        scaleValue = 0
         self.zoomStartTransform = self.transform()
 
         self.zoomStart = event.pos()
         if delta < 0:
             scaleValue = .9
         else:
-
             scaleValue = 1.1
 
         self.zoom(scaleValue)
@@ -174,9 +175,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         painter.setBrush(self.textBrush)
         painter.setWorldMatrixEnabled(False)
 
-        #iconsDir = os.path.dirname(os.path.dirname(__file__)) + "/Elemental/icons/"
         image = QtGui.QImage()
-        
 
         w = image.size().width()
         h = image.size().height()
@@ -186,3 +185,22 @@ class GungGraphicsView(QtGui.QGraphicsView):
         painter.drawText(w + 2, self.height() - 6, QString(versionString))
 
         return QtGui.QGraphicsView.drawBackground(self, painter, rect)
+
+    def setScene(self, scene):
+        if isinstance(scene, GungScene):
+            scene.draggingStarted.connect(self.startDragging)
+        return QtGui.QGraphicsView.setScene(self, scene)
+
+    @Slot(int)
+    def startDragging(self, itemid):
+        drag = QDrag(self)
+        data = QMimeData()
+        data.setText(str(itemid))
+        drag.setMimeData(data)
+        drag.exec_()
+
+    def dragMoveEvent(self, event):
+        #print "Dragging something"
+        self.scene().updateDraggingEdge(self.mapToScene(event.pos()))
+
+
