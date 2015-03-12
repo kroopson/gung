@@ -1,7 +1,10 @@
 from PySide.QtGui import QGraphicsScene
-from gungnode import GungItem, GungNode
+
+from gungnode import GungItem, GungNode, getGungNodeClasses
 
 import xml.dom.minidom as xmldom
+from xml.dom import Node
+
 
 class GungScene(QGraphicsScene):
     def __init__(self, parent=None):
@@ -49,3 +52,21 @@ class GungScene(QGraphicsScene):
                 doc.documentElement.appendChild(xmlnode)
                 sc = node.scene()  # I don't know why it's corrupted without it...
         return doc
+    
+    def fromXml(self, xmlstring):
+        """
+        Parses XML string and fills the current scene with the nodes. The scene MUST be empty since
+        this method sets the node id's that are loaded to the values stored in an xml.
+        """
+        dom = xmldom.parseString(xmlstring)
+        
+        classes = getGungNodeClasses()
+         
+        for node in dom.documentElement.childNodes:
+            if not node.nodeType == Node.ELEMENT_NODE:
+                continue
+            if not node.tagName in classes.keys():
+                continue
+            gn = classes[node.tagName](parent=None, scene=self)
+            gn.fromXml(node)
+

@@ -1,6 +1,17 @@
 import PySide.QtCore as QtCore
 import PySide.QtGui as QtGui
 from PySide.QtCore import QPoint
+from xml.dom import Node
+import inspect
+import sys
+
+def getGungNodeClasses():
+    gungClasses = {}
+        
+    for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+        if "elementType" in obj.__dict__.keys():
+            gungClasses[name] = obj
+    return gungClasses
 
 
 class GungItem(QtGui.QGraphicsItem):
@@ -16,6 +27,9 @@ class GungItem(QtGui.QGraphicsItem):
         self.id_ = None
         
         self.properties = {}
+        
+        self.properties['posX'] = 0.0
+        self.properties['posY'] = 0.0
         
         if nodeId is None:
             nodeId = self.scene().getNewId()
@@ -41,6 +55,24 @@ class GungItem(QtGui.QGraphicsItem):
             element.appendChild(item_element)
 
         return element
+    
+    def fromXml(self, xmlnode):
+        for k in xmlnode.attributes.keys():
+            if not k in self.properties.keys():
+                continue
+            self.properties[k] = type(self.properties[k])(xmlnode.attributes[k].value)
+        
+        self.setX(self.properties['posX'])
+        self.setY(self.properties['posY'])
+        
+        classes = getGungNodeClasses()
+        for node in xmlnode.childNodes:
+            if not node.nodeType == Node.ELEMENT_NODE:
+                continue
+            if not node.tagName in classes.keys():
+                continue
+            gn = classes[node.tagName](parent=self, scene=self.scene())
+            gn.fromXml(node)
 
 
 class GungNode(GungItem):
@@ -48,11 +80,12 @@ class GungNode(GungItem):
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
     """
-    def __init__(self, name, parent=None, scene=None):
+    def __init__(self, name="", parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
         self.resizer = None
-
+        
+        self.properties['name'] = name
         self.properties['nodeWidth'] = 0.0
         self.properties['nodeHeight'] = 0.0
         self.properties['minimalWidth'] = 0.0
@@ -79,10 +112,6 @@ class GungNode(GungItem):
         self.setFlag(QtGui.QGraphicsItem.ItemClipsToShape, True)
         self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges, True)
-
-        self.name = name
-
-        self.plugNodes = []
 
         self.draggingNode = None
 
@@ -141,14 +170,20 @@ class GungNode(GungItem):
 
         self.properties['nodeHeight'] = self.properties['minimalHeight']
         self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
+        print "self.properties['minimalHeight']",self.properties['minimalHeight']
 
     def mousePressEvent(self, event):
-        self.scene().topZ += .001
+        self.scene().topZ += .0001
         self.setZValue(self.scene().topZ)
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
+    
+    def fromXml(self, xmlnode):
+        GungItem.fromXml(self, xmlnode)
+        self.resizer.setX(self.properties['nodeWidth'])
+        self.resizer.setY(self.properties['nodeHeight'])
 
     def setSize(self, size):
         growing = False
@@ -177,7 +212,7 @@ class GungNode(GungItem):
 
         # draw name of an element
         painter.setPen(self.textPen)
-        painter.drawText(5, 15, self.name)
+        painter.drawText(5, 15, self.properties['name'])
 
     def boundingRect(self):
         return QtCore.QRectF(-1, -1, self.bboxW + 1, self.bboxH + 1)
@@ -238,6 +273,11 @@ class GungPlug(GungItem):
         self.plugPen = QtGui.QPen(plugColor.lighter())
 
         self.plugBrush = QtGui.QBrush(plugColor)
+    
+    def mousePressEvent(self, event):
+        print "Starting to drag!"
+        event.accept()
+        #return GungItem.mousePressEvent(self, event)
 
     def paint(self, painter, option, widget=None):
         """
@@ -266,6 +306,14 @@ class GungNodeResizer(QtGui.QGraphicsItem):
 
         self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        
+    def mousePressEvent(self, *args, **kwargs):
+        self.setCursor(QtCore.Qt.SizeFDiagCursor)
+        return QtGui.QGraphicsItem.mousePressEvent(self, *args, **kwargs)
+    
+    def mouseReleaseEvent(self, *args, **kwargs):
+        self.unsetCursor()
+        return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
     def paint(self, painter, option, widget=None):
         """
@@ -273,7 +321,11 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         Implement this to give a resizer the desired look.
         """
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        painter.setPen(self.pen)
+        # draw body of a node
+        if self.parentItem().isSelected():
+            painter.setPen(self.parentItem().selectedPen)
+        else:
+            painter.setPen(self.parentItem().unselectedPen)
         painter.setBrush(self.brush )
 
         painter.drawPolygon([QPoint(self.itemWidth - 1, self.itemHeight - 1),
@@ -295,8 +347,9 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             parentMinWidth = self.parentItem().properties['minimalWidth'] - self.itemWidth
-            parentMinHeight = self.parentItem().properties['minimalWidth'] - self.itemHeight
+            parentMinHeight = self.parentItem().properties['minimalHeight'] - self.itemHeight
 
+            
             if value.x() < parentMinWidth:
                 value.setX(parentMinWidth)
                 self.setX(parentMinWidth)
@@ -308,3 +361,4 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             self.parentItem().setSize(self.pos() + self.sizePoint)
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
+
