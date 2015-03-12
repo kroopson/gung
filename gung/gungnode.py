@@ -170,7 +170,6 @@ class GungNode(GungItem):
 
         self.properties['nodeHeight'] = self.properties['minimalHeight']
         self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
-        print "self.properties['minimalHeight']",self.properties['minimalHeight']
 
     def mousePressEvent(self, event):
         self.scene().topZ += .0001
