@@ -6,6 +6,7 @@ from gungnode import GungItem, GungNode, GungEdge, getGungNodeClasses
 
 import xml.dom.minidom as xmldom
 from xml.dom import Node
+from gungnode import GungPlug
 
 
 class GungDragEdge(QGraphicsItem):
@@ -37,7 +38,7 @@ class GungDragEdge(QGraphicsItem):
 
         topleftX = min(self.posStart.x(), self.posEnd.x())
         topleftY = min(self.posStart.y(), self.posEnd.y())
-
+        
         self.setPos(QPointF(topleftX, topleftY))
         self.update()
 
@@ -55,6 +56,9 @@ class GungDragEdge(QGraphicsItem):
         bottomrightY = max(self.posStart.y(), self.posEnd.y())
 
         return QRectF(0, 0, bottomrightX - topleftX, bottomrightY - topleftY)
+
+    def mouseReleaseEvent(self, *args, **kwargs):
+        return QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
 class GungScene(QGraphicsScene):
     draggingStarted = Signal(int)
@@ -133,21 +137,81 @@ class GungScene(QGraphicsScene):
     def createDraggingEdge(self):
         self.draggingEdge = GungDragEdge(scene=self)
 
-    def initDraggingEdge(self, dragStart):
+    def initDraggingEdge(self, dragStart, dragFrom):
         """
         Starts the dragging and sets the start position of a dragged edge.
         :param dragStart: QPointF
+        :param dragFrom: GungItem
         :return:
         """
         """
         :param dragStart:
         :return:
         """
-        #self.
         self.isDragging = True
         self.draggingEdge.posStart = dragStart
         self.draggingEdge.posEnd = dragStart
+        self.dragFrom = dragFrom
+        self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
         self.draggingEdge.update()
+        
+    def mouseMoveEvent(self, event):
+        if self.isDragging:
+            self.updateDraggingEdge(event.scenePos())
+        return QGraphicsScene.mouseMoveEvent(self, event)
+    
+    def mouseReleaseEvent(self, event):
+        return QGraphicsScene.mouseReleaseEvent(self, event)
+
+    def draggingEnded(self, pos):
+        #--- it the scene is not in "dragging" state then it means that
+        #--- no action is necessary here
+        if not self.isDragging:
+            return
+        
+        #--- stop displaying the utility edge
+        self.hideDraggingEdge()
+        
+        #--- iterate all the items that occlude with the place where dragging stopped
+        #--- and see if there is a GungPlug among them. If not then return None
+        hititems = self.items(pos)
+        if not len(hititems):
+            return
+        hititem = None
+        for hi in hititems:
+            if isinstance(hi, GungPlug):
+                hititem = hi
+                break
+        
+        #--- stop if no plug is found
+        if hititem is None:
+            return
+        
+        #--- top if there is no item from which the dragging started
+        if self.dragFrom is None:
+            return
+        
+        #--- quit if the dragging ended on the same item
+        if self.dragFrom is hititem:
+            return
+        
+        #--- check it maybe there is already a connection between those plugs
+        for edge in self.dragFrom.edges:
+            if edge is None:
+                continue
+            if hititem in [edge.itemFrom, edge.itemTo]:
+                return
+        for edge in hititem.edges:
+            if edge is None:
+                continue
+            if self.dragFrom in [edge.itemFrom, edge.itemTo]:
+                return
+        
+        #--- finally create an edge
+        e = GungEdge(scene=self)
+        e.properties['itemFromId'] = self.dragFrom.properties['nodeId']
+        e.properties['itemToId'] = hititem.properties['nodeId']
+        e.reconnectEdge()
 
     def updateDraggingEdge(self, pos):
         self.draggingEdge.posEnd = pos
@@ -157,3 +221,6 @@ class GungScene(QGraphicsScene):
         self.isDragging = False
         self.draggingEdge.posStart = None
         self.draggingEdge.posEnd = None
+        self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
+        self.draggingEdge.update()
+        self.update()

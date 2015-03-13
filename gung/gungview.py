@@ -199,8 +199,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
         drag.setMimeData(data)
         drag.exec_()
 
-    def dragMoveEvent(self, event):
-        #print "Dragging something"
-        self.scene().updateDraggingEdge(self.mapToScene(event.pos()))
+    #def dragMoveEvent(self, event):
+    #    #print "Dragging something"
+    #    self.scene().updateDraggingEdge(self.mapToScene(event.pos()))
 
 

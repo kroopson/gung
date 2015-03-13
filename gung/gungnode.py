@@ -278,14 +278,13 @@ class GungPlug(GungItem):
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
     
     def mousePressEvent(self, event):
-        print "Starting to drag!"
         event.accept()
+        self.scene().initDraggingEdge(self.mapToScene(self.boundingRect().center()), self)
 
-        self.scene().initDraggingEdge(self.mapToScene(event.pos()))
-
-        self.scene().draggingStarted.emit(int(self.properties['nodeId']))
-
-        #return GungItem.mousePressEvent(self, event)
+    def mouseReleaseEvent(self, event):
+        
+        self.scene().draggingEnded(self.mapToScene(event.pos()))
+        return GungItem.mouseReleaseEvent(self, event)
 
     def paint(self, painter, option, widget=None):
         """
