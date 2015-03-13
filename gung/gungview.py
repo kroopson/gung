@@ -1,7 +1,7 @@
 from PySide import QtGui, QtCore
 from PySide.QtCore import Slot, QMimeData
 from PySide.QtGui import QDrag
-from gungnode import GungNode
+from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
 versionString = "GUNG v.0.0.2"
@@ -62,7 +62,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def zoom(self, scaleValue):
         if scaleValue <= 0.1:
             scaleValue = .01
-
+        
         currentTransform = self.zoomStartTransform
         self.setTransform(currentTransform)
         scenePos = self.mapToScene(self.zoomStart)
@@ -77,6 +77,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         scaledTransform.translate(translateVal[0], translateVal[1])
         self.setTransform(scaledTransform)
         self.getCurrentScale()
+        
 
     def getCurrentScale(self):
         matrix = self.transform()
@@ -146,6 +147,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
         sceneItems = scenka.items()
         nodes = []
         for item in sceneItems:
+            if not isinstance(item, GungItem):
+                continue
             nodes.append(item)
         return nodes
 

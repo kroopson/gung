@@ -212,6 +212,8 @@ class GungScene(QGraphicsScene):
         e.properties['itemFromId'] = self.dragFrom.properties['nodeId']
         e.properties['itemToId'] = hititem.properties['nodeId']
         e.reconnectEdge()
+        e.updatePosition()
+        e.update()
 
     def updateDraggingEdge(self, pos):
         self.draggingEdge.posEnd = pos

@@ -340,6 +340,7 @@ class GungEdge(GungItem):
             self.itemTo = self.scene().getNodeById(int(self.properties['itemToId']))
             if not self.itemTo is None:
                 self.itemTo.edges.append(self)
+        self.updatePosition()
         self.update()
         
     def paint(self, painter, option, widget=None):
