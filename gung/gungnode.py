@@ -216,6 +216,22 @@ class GungNode(GungItem):
     def boundingRect(self):
         return QtCore.QRectF(-1, -1, self.bboxW + 1, self.bboxH + 1)
 
+    def itemChange(self, change, value):
+        """
+        Called whenever a change happens to the instance of this class like move, click, resize ect.
+        In this case used to register position changes of the nodes, so that they can be reverted using the
+        undo queue.
+        :param change: defines a type of a change
+        :param value: defines a value of a change
+        :return: QVariant
+        """
+        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+            #--- inform the scene that this item has moved.
+            self.scene().nodesHaveMoved = True
+
+        return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+
 
 class GungAttribute(GungItem):
     elementType = "GungAttribute"
@@ -340,8 +356,17 @@ class GungEdge(GungItem):
             self.itemTo = self.scene().getNodeById(int(self.properties['itemToId']))
             if not self.itemTo is None:
                 self.itemTo.edges.append(self)
+        self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
         self.updatePosition()
         self.update()
+
+    def disconnectEdge(self):
+        # TODO: Make it more loose coupled. Now it's a field for the errors.
+        while self in self.itemFrom.edges:
+            self.itemFrom.edges.remove(self)
+        while self in self.itemTo.edges:
+            self.itemTo.edges.remove(self)
+        self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
         
     def paint(self, painter, option, widget=None):
         painter.setPen(self.edgePen)
@@ -454,8 +479,9 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             if value.y() < parentMinHeight:
                 value.setY(parentMinHeight)
                 self.setY(parentMinHeight)
-
+            # TODO: store the current width and height of the node
             self.parentItem().setSize(self.pos() + self.sizePoint)
+            # TODO: create the QUndoCommand that will undo/redo this.
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 

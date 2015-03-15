@@ -1,5 +1,5 @@
 from PySide import QtGui, QtCore
-from PySide.QtCore import Slot, QMimeData
+from PySide.QtCore import Slot, QMimeData, Signal
 from PySide.QtGui import QDrag
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
@@ -7,7 +7,7 @@ QString = str
 versionString = "GUNG v.0.0.2"
 
 class GungGraphicsView(QtGui.QGraphicsView):
-
+    undoSignal = Signal()
     def __init__(self, parent=None):
         QtGui.QGraphicsView.__init__(self, parent)
         self.previousMousePosition = None
@@ -161,14 +161,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.zoomToAll()
             event.accept()
 
-        if event.key() == QtCore.Qt.Key_S:
-            smoothLines = self.scene().smoothLines
-            if smoothLines is True:
-                self.scene().smoothLines = False
-            else:
-                self.scene().smoothLines = True
-            self.scene().update()
-            event.accept()
+        if event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.undoSignal.emit()
 
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
@@ -192,6 +186,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def setScene(self, scene):
         if isinstance(scene, GungScene):
             scene.draggingStarted.connect(self.startDragging)
+            self.undoSignal.connect(scene.undoCalled)
         return QtGui.QGraphicsView.setScene(self, scene)
 
     @Slot(int)

@@ -69,6 +69,13 @@ class TestSequenceFunctions(unittest.TestCase):
         
         sceneB.fromXml(scenexml.toxml())
         self.assert_(sceneB.asXml().toxml() == scenexml.toxml(), "Scene serialization failed!")
+
+    def testGetNodeById(self):
+        scene = GungScene(self.view)
+        node = GungNode("test%i", None, scene)
+        self.assert_(scene.getNodeById(0) == node, "Failed to get the node by Id")
+        nodeB = GungNode("test%i", None, scene)
+        self.assert_(scene.getNodeById(1) == nodeB, "Failed to get the second node by Id")
     
     def tearDown(self):
         self.w.close()

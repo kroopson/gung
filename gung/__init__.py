@@ -162,6 +162,6 @@ if __name__ == "__main__":
     
     #xml = scene.asXml()
     #print xml.toprettyxml("    ")
-    
+    print "Started"
     app.exec_()
     sys.exit(0)
