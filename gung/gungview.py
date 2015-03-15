@@ -8,6 +8,7 @@ versionString = "GUNG v.0.0.2"
 
 class GungGraphicsView(QtGui.QGraphicsView):
     undoSignal = Signal()
+    redoSignal = Signal()
     def __init__(self, parent=None):
         QtGui.QGraphicsView.__init__(self, parent)
         self.previousMousePosition = None
@@ -164,6 +165,9 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
             self.undoSignal.emit()
 
+        if event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.redoSignal.emit()
+
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def drawBackground(self, painter, rect):
@@ -187,6 +191,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if isinstance(scene, GungScene):
             scene.draggingStarted.connect(self.startDragging)
             self.undoSignal.connect(scene.undoCalled)
+            self.redoSignal.connect(scene.redoCalled)
         return QtGui.QGraphicsView.setScene(self, scene)
 
     @Slot(int)

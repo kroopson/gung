@@ -211,6 +211,10 @@ class GungScene(QGraphicsScene):
         self.update()
 
     @Slot()
+    def redoCalled(self):
+        self.undoStack.redo()
+
+    @Slot()
     def undoCalled(self):
         self.undoStack.undo()
 
