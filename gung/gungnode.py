@@ -380,7 +380,7 @@ class GungEdge(GungItem):
         self.update()
 
     def disconnectEdge(self):
-        # TODO: Make it more loose coupled. Now it's a field for the errors.
+        # TODO: Make it more loose coupled. Now it's a field for errors.
         while self in self.itemFrom.edges:
             self.itemFrom.edges.remove(self)
         while self in self.itemTo.edges:
@@ -439,6 +439,7 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.storedPos = QtCore.QPointF()
 
         self.itemWidth = 10
         self.itemHeight = 10
@@ -450,10 +451,14 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         
     def mousePressEvent(self, *args, **kwargs):
         self.setCursor(QtCore.Qt.SizeFDiagCursor)
+        self.storedPos = self.pos()
         return QtGui.QGraphicsItem.mousePressEvent(self, *args, **kwargs)
     
     def mouseReleaseEvent(self, *args, **kwargs):
         self.unsetCursor()
+        p = self.pos()
+        if p != self.storedPos:
+            self.scene().resizeNode(self.parentItem().properties['nodeId'], p + self.sizePoint, self.storedPos + self.sizePoint)
         return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
     def paint(self, painter, option, widget=None):

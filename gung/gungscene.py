@@ -259,6 +259,10 @@ class GungScene(QGraphicsScene):
         self.update()
         self.parent().unsetCursor()
 
+    def resizeNode(self, nodeId, size, previousSize):
+        c = GungResizeNodeCommand(self, nodeId, size.x(), size.y(), previousSize.x(), previousSize.y())
+        self.undoStack.push(c)
+
     @Slot()
     def redoCalled(self):
         self.undoStack.redo()
@@ -327,6 +331,33 @@ class GungCreateEdgeCommand(QUndoCommand):
         e.properties['itemToId'] = int(self.toNodeId)
         e.reconnectEdge()
         self.createdEdgeId = int(e.properties['nodeId'])
+
+class GungResizeNodeCommand(QUndoCommand):
+    def __init__(self, scene, nodeId, width, height, previousWith, previousHeight):
+        """
+        This dictionary has to hold the id's as the keys and positions as values.
+        i.e.
+        {
+        10 : [0,0,250,100]
+        }
+        """
+        QUndoCommand.__init__(self)
+        self.nodeId = int(nodeId)
+        self.width = float(width)
+        self.height = float(height)
+        self.previousWidth = float(previousWith)
+        self.previousHeight = float(previousHeight)
+        self.scene = scene
+
+    def undo(self, *args, **kwargs):
+        node = self.scene.getNodeById(self.nodeId)
+        node.resizer.setX(self.previousWidth - node.resizer.itemWidth)
+        node.resizer.setY(self.previousHeight - node.resizer.itemHeight)
+
+    def redo(self, *args, **kwargs):
+        node = self.scene.getNodeById(self.nodeId)
+        node.resizer.setX(self.width - node.resizer.itemWidth)
+        node.resizer.setY(self.height - node.resizer.itemHeight)
 
 class GungDragEdge(QGraphicsItem):
     def __init__(self, scene=None):
