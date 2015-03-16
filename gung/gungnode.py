@@ -305,9 +305,6 @@ class GungPlug(GungItem):
         self.scene().initDraggingEdge(self.mapToScene(self.boundingRect().center()), self)
         
     def mouseMoveEvent(self, event):
-        """
-        
-        """
         return GungItem.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):

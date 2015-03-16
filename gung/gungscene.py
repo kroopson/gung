@@ -1,4 +1,4 @@
-from PySide import QtGui
+from PySide import QtGui, QtCore
 from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack, QUndoCommand
 from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
@@ -25,6 +25,7 @@ class GungScene(QGraphicsScene):
         self.nodesHaveMoved = False
         self.undoStack = QUndoStack(self)
         self.edges = []
+        
 
     def getNewId(self):
         index = 0
@@ -107,6 +108,7 @@ class GungScene(QGraphicsScene):
         self.dragFrom = dragFrom
         self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
         self.draggingEdge.update()
+        self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
         
     def mouseMoveEvent(self, event):
         if self.isDragging:
@@ -216,6 +218,7 @@ class GungScene(QGraphicsScene):
         self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
         self.draggingEdge.update()
         self.update()
+        self.parent().unsetCursor()
 
     @Slot()
     def redoCalled(self):
