@@ -114,6 +114,9 @@ class GungScene(QGraphicsScene):
         if self.nodesHaveMoved:
             self.checkIfNodesMoved()
             self.nodesHaveMoved = False
+        
+        if self.isDragging:
+            self.draggingEnded(event.pos())
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def checkIfNodesMoved(self):
@@ -179,6 +182,10 @@ class GungScene(QGraphicsScene):
         
         #--- quit if the dragging ended on the same item
         if self.dragFrom is hititem:
+            return
+        
+        #--- check if the in-plug actually accepts connections from the GungPlug held in self.dragFrom
+        if not hititem.acceptsDrop(self.dragFrom):
             return
         
         #--- check it maybe there is already a connection between those plugs

@@ -277,6 +277,8 @@ class GungAttribute(GungItem):
 
 class GungPlug(GungItem):
     elementType = "GungPlug"
+    acceptsConnections = "GungPlug"
+    
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
@@ -286,20 +288,28 @@ class GungPlug(GungItem):
         plugColor = QtGui.QColor(150, 255, 150)
 
         self.plugPen = QtGui.QPen(plugColor.lighter())
-
         self.plugBrush = QtGui.QBrush(plugColor)
         
         self.edges = []
         
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
     
+    def acceptDrops(self, plugOut):
+        result = False
+        return 
+    
     def mousePressEvent(self, event):
         event.accept()
         self.scene().initDraggingEdge(self.mapToScene(self.boundingRect().center()), self)
+        
+    def mouseMoveEvent(self, event):
+        """
+        
+        """
+        return GungItem.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
-        
-        self.scene().draggingEnded(self.mapToScene(event.pos()))
+        #self.scene().draggingEnded(self.mapToScene(event.pos()))
         return GungItem.mouseReleaseEvent(self, event)
 
     def paint(self, painter, option, widget=None):
