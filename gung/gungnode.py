@@ -284,11 +284,14 @@ class GungPlug(GungItem):
 
         self.properties['plugWidth'] = 14.0
         self.properties['plugHeight'] = 14.0
+        
+        self.isHighlighted = False
 
         plugColor = QtGui.QColor(150, 255, 150)
 
         self.plugPen = QtGui.QPen(plugColor.lighter())
         self.plugBrush = QtGui.QBrush(plugColor)
+        self.highlightedPlugBrush = QtGui.QBrush(plugColor.lighter())
         
         self.edges = []
         
@@ -317,8 +320,15 @@ class GungPlug(GungItem):
         """
         painter.setPen(self.plugPen)
 
-        painter.setBrush(self.plugBrush)
+        if self.isHighlighted:
+            painter.setBrush(self.highlightedPlugBrush)
+        else:
+            painter.setBrush(self.plugBrush)    
         painter.drawRect(1, 1, self.properties['plugWidth'] - 1, self.properties['plugHeight'] - 1)
+
+    def setHighlighted(self, state):
+        self.isHighlighted = state
+        self.update()
 
     def boundingRect(self, *args, **kwargs):
         return QtCore.QRectF(-1, -1, self.properties['plugWidth'] + 1, self.properties['plugHeight'] + 1)

@@ -2,13 +2,11 @@ from PySide import QtGui, QtCore
 from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack, QUndoCommand
 from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
-from gungnode import GungItem, GungNode, GungEdge, getGungNodeClasses
+from gungnode import GungItem, GungPlug, GungNode, GungEdge, getGungNodeClasses
+
 
 import xml.dom.minidom as xmldom
 from xml.dom import Node
-from gungnode import GungPlug
-
-import pdb
 
 
 class GungScene(QGraphicsScene):
@@ -24,7 +22,8 @@ class GungScene(QGraphicsScene):
         self.draggingEdge = GungDragEdge(scene=self)
         self.nodesHaveMoved = False
         self.undoStack = QUndoStack(self)
-        self.edges = []
+        
+        self.highlightedPlugs = []
         
 
     def getNewId(self):
@@ -98,10 +97,6 @@ class GungScene(QGraphicsScene):
         :param dragFrom: GungItem
         :return:
         """
-        """
-        :param dragStart:
-        :return:
-        """
         self.isDragging = True
         self.draggingEdge.posStart = dragStart
         self.draggingEdge.posEnd = dragStart
@@ -111,14 +106,51 @@ class GungScene(QGraphicsScene):
         self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
         
     def mouseMoveEvent(self, event):
+        
+        if event.buttons() == QtCore.Qt.MidButton:
+            return QGraphicsScene.mouseMoveEvent(self, event)
+        if event.buttons() == QtCore.Qt.RightButton:
+            return QGraphicsScene.mouseMoveEvent(self, event)
+        
         if self.isDragging:
             self.updateDraggingEdge(event.scenePos())
+        
+            plug = self.getPlugInPoint(event.scenePos())
+            
+            highlightedPlug = None
+            
+            if not plug is None:
+                if plug.acceptsDrop(self.dragFrom):
+                    plug.setHighlighted(True)
+                    highlightedPlug = plug
+                    self.highlightedPlugs.append(plug)
+                else:
+                    self.parent().setCursor(QtCore.Qt.ForbiddenCursor)
+            else:
+                self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
+        else:
+            self.parent().unsetCursor()
+        
+        templist = []
+        for item in self.highlightedPlugs:
+            if item is highlightedPlug:
+                templist.append(item)
+                continue
+            item.setHighlighted(False)
+            
+        self.highlightedPlugs = templist
+        
         return QGraphicsScene.mouseMoveEvent(self, event)
     
     def mouseReleaseEvent(self, event):
         if self.nodesHaveMoved:
             self.checkIfNodesMoved()
             self.nodesHaveMoved = False
+            
+        for item in self.highlightedPlugs:
+            item.setHighlighted(False)
+        self.highlightedPlugs = []
+        
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def checkIfNodesMoved(self):
@@ -153,6 +185,22 @@ class GungScene(QGraphicsScene):
 
         self.undoStack.push(undo)
         self.nodesHaveMoved = False
+        
+    def getPlugInPoint(self, pos):
+        """Iterate all the items that occlude with the point passed as pos and see if there is a GungPlug among them.
+        If not then return None
+        @param pos: QPoint
+        @return GungNode or None
+        """
+        hititems = self.items(pos)
+        if not len(hititems):
+            return
+        hititem = None
+        for hi in hititems:
+            if isinstance(hi, GungPlug):
+                hititem = hi
+                break
+        return hititem
 
     def draggingEnded(self, pos):
         #--- it the scene is not in "dragging" state then it means that
@@ -163,16 +211,7 @@ class GungScene(QGraphicsScene):
         #--- stop displaying the utility edge
         self.hideDraggingEdge()
         
-        #--- iterate all the items that occlude with the place where dragging stopped
-        #--- and see if there is a GungPlug among them. If not then return None
-        hititems = self.items(pos)
-        if not len(hititems):
-            return
-        hititem = None
-        for hi in hititems:
-            if isinstance(hi, GungPlug):
-                hititem = hi
-                break
+        hititem = self.getPlugInPoint(pos)
         
         #--- stop if no plug is found
         if hititem is None:
@@ -279,7 +318,6 @@ class GungCreateEdgeCommand(QUndoCommand):
     def undo(self, *args, **kwargs):
         createdEdge = self.scene.getNodeById(self.createdEdgeId)
         createdEdge.disconnectEdge()
-
         self.scene.removeItem(createdEdge)
         self.scene.update()
 
@@ -288,9 +326,7 @@ class GungCreateEdgeCommand(QUndoCommand):
         e.properties['itemFromId'] = int(self.fromNodeId)
         e.properties['itemToId'] = int(self.toNodeId)
         e.reconnectEdge()
-        
         self.createdEdgeId = int(e.properties['nodeId'])
-        self.scene.edges.append(e)
 
 class GungDragEdge(QGraphicsItem):
     def __init__(self, scene=None):
