@@ -8,6 +8,7 @@ import xml.dom.minidom as xmldom
 from xml.dom import Node
 from gungnode import GungPlug
 
+import pdb
 
 
 class GungScene(QGraphicsScene):
@@ -15,6 +16,7 @@ class GungScene(QGraphicsScene):
 
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
+        
         self.topZ = 0.0000
         self.topEdgeZ = 1.0000
         self.isDragging = False
@@ -22,6 +24,7 @@ class GungScene(QGraphicsScene):
         self.draggingEdge = GungDragEdge(scene=self)
         self.nodesHaveMoved = False
         self.undoStack = QUndoStack(self)
+        self.edges = []
 
     def getNewId(self):
         index = 0
@@ -134,11 +137,11 @@ class GungScene(QGraphicsScene):
         undo = GungMoveCommand(self)
         for node in nodesThatHaveMoved:
             nodepos = node.pos()
-            undo.nodes[node.properties['nodeId']] = [
-                node.properties['posX'],
-                node.properties['posY'],
-                nodepos.x(),
-                nodepos.y()
+            undo.nodes[int(node.properties['nodeId'])] = [
+                float(node.properties['posX']),
+                float(node.properties['posY']),
+                float(nodepos.x()),
+                float(nodepos.y())
             ]
 
             #--- keep current position in the values of a dictionary so that this node will not be collected as moved
@@ -221,7 +224,7 @@ class GungScene(QGraphicsScene):
     @Slot()
     def undoCalled(self):
         self.undoStack.undo()
-
+        
 
 class GungMoveCommand(QUndoCommand):
     def __init__(self, scene):
@@ -254,6 +257,7 @@ class GungMoveCommand(QUndoCommand):
             gnode.properties['posY'] = self.nodes[n][3]
         self.scene.nodesHaveMoved = False
 
+
 class GungCreateEdgeCommand(QUndoCommand):
     def __init__(self, scene, fromNode, toNode):
         """
@@ -264,21 +268,26 @@ class GungCreateEdgeCommand(QUndoCommand):
         }
         """
         QUndoCommand.__init__(self)
-        self.fromNode = fromNode
-        self.toNode = toNode
+        self.fromNodeId = int(fromNode.properties['nodeId'])
+        self.toNodeId = int(toNode.properties['nodeId'])
         self.scene = scene
-        self.createdEdge = None
+        self.createdEdgeId = -1
 
     def undo(self, *args, **kwargs):
-        self.createdEdge.disconnectEdge()
-        self.scene.removeItem(self.createdEdge)
+        createdEdge = self.scene.getNodeById(self.createdEdgeId)
+        createdEdge.disconnectEdge()
+
+        self.scene.removeItem(createdEdge)
+        self.scene.update()
 
     def redo(self, *args, **kwargs):
-        e = GungEdge(scene=self.scene)
-        e.properties['itemFromId'] = self.fromNode.properties['nodeId']
-        e.properties['itemToId'] = self.toNode.properties['nodeId']
+        e = GungEdge(parent=None, scene=self.scene)
+        e.properties['itemFromId'] = int(self.fromNodeId)
+        e.properties['itemToId'] = int(self.toNodeId)
         e.reconnectEdge()
-        self.createdEdge = e
+        
+        self.createdEdgeId = int(e.properties['nodeId'])
+        self.scene.edges.append(e)
 
 class GungDragEdge(QGraphicsItem):
     def __init__(self, scene=None):
