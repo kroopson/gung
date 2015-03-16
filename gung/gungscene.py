@@ -114,9 +114,6 @@ class GungScene(QGraphicsScene):
         if self.nodesHaveMoved:
             self.checkIfNodesMoved()
             self.nodesHaveMoved = False
-        
-        if self.isDragging:
-            self.draggingEnded(event.pos())
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def checkIfNodesMoved(self):

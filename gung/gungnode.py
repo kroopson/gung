@@ -294,9 +294,11 @@ class GungPlug(GungItem):
         
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
     
-    def acceptDrops(self, plugOut):
+    def acceptsDrop(self, plugOut):
         result = False
-        return 
+        if plugOut.elementType in self.acceptsConnections.split(","):
+            result =True
+        return result
     
     def mousePressEvent(self, event):
         event.accept()
@@ -309,7 +311,7 @@ class GungPlug(GungItem):
         return GungItem.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
-        #self.scene().draggingEnded(self.mapToScene(event.pos()))
+        self.scene().draggingEnded(self.mapToScene(event.pos()))
         return GungItem.mouseReleaseEvent(self, event)
 
     def paint(self, painter, option, widget=None):
