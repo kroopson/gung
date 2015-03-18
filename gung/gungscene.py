@@ -379,17 +379,11 @@ class GungCreateEdgeCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         self.scene.removeEdge(self.createdEdgeId)
-        for i in self.scene.items():
-            if isinstance(i,GungEdge):
-                print i
 
     def redo(self, *args, **kwargs):
         e = GungEdge(int(self.fromNodeId), int(self.toNodeId), parent=None, scene=self.scene)
         e.reconnectEdge()
         self.createdEdgeId = int(e.properties['nodeId'])
-        for i in self.scene.items():
-            if isinstance(i,GungEdge):
-                print i
 
 class GungResizeNodeCommand(QUndoCommand):
     """
