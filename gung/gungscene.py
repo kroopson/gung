@@ -250,6 +250,8 @@ class GungScene(QGraphicsScene):
         
     def removeEdge(self, edgeId):
         createdEdge = self.getNodeById(edgeId)
+        if createdEdge is None:
+            return
         createdEdge.disconnectEdge()
         createdEdge.prepareGeometryChange()        
         self.removeItem(createdEdge)
@@ -274,8 +276,13 @@ class GungScene(QGraphicsScene):
     @Slot()
     def deleteCalled(self):
         sel = self.selectedItems()
+        nodes = []
         for item in sel:
-            self.removeItem(item)
+            if isinstance(item, GungNode):
+                nodes.append(item)
+        if len(nodes):
+            command = GungDeleteItemsCommand(self, nodes)
+            self.undoStack.push(command)
 
     @Slot()
     def redoCalled(self):
@@ -316,6 +323,39 @@ class GungMoveCommand(QUndoCommand):
             gnode.properties['posX'] = self.nodes[n][2]
             gnode.properties['posY'] = self.nodes[n][3]
         self.scene.nodesHaveMoved = False
+
+
+class GungDeleteItemsCommand(QUndoCommand):
+    def __init__(self, scene, nodes):
+        QUndoCommand.__init__(self)
+        self.scene = scene
+        self.nodes = [x for x in nodes]
+        
+        self.edges = []
+
+    def undo(self, *args, **kwargs):
+        for n in self.nodes:
+            self.scene.addItem(n)
+            
+        for e in self.edges:
+            self.scene.addItem(e)
+            e.reconnectEdge()
+            
+
+    def redo(self, *args, **kwargs):
+        edgesToDelete = []
+        for n in self.nodes:
+            edgesToDelete += n.getAllEdges()
+        
+        for edge in edgesToDelete:
+            edge.disconnectEdge()
+        self.edges = edgesToDelete
+        
+        for e in edgesToDelete:
+            self.scene.removeItem(e)
+        
+        for item in self.nodes:
+            self.scene.removeItem(item)
 
 
 class GungCreateEdgeCommand(QUndoCommand):

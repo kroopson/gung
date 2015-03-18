@@ -231,6 +231,20 @@ class GungNode(GungItem):
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
+    def getAllEdges(self):
+        """
+        Returns all edges connected to plugs for this node.
+        """
+        result = []
+        for item in self.childItems():
+            if not isinstance(item, GungAttribute):
+                continue
+            for subitem in item.childItems():
+                if not isinstance(subitem, GungPlug):
+                    continue
+                result += subitem.edges
+        return result
+
 
 
 class GungAttribute(GungItem):
@@ -392,8 +406,6 @@ class GungEdge(GungItem):
                 self.itemTo.edges.append(self)
                 pass
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
-        #self.updatePosition()
-#         self.update()
 
     def disconnectEdge(self):
         # TODO: Make it more loose coupled. Now it's a field for errors.
@@ -404,30 +416,13 @@ class GungEdge(GungItem):
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
         
     def paint(self, painter, option, widget=None):
-        painter.setPen(self.edgePen)
-
-        #if self.itemFrom is None or self.itemTo is None:
-        #    return 
-        
+        if self.itemFrom is None or self.itemTo is None:
+            return
+        painter.setPen(self.edgePen)        
         posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
         posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
         
         painter.drawLine(posStart, posEnd)
-    
-    def updatePosition(self):
-        return
-        if self.itemFrom is None or self.itemTo is None:
-            return
-        
-        #posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
-        #posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
-        posStart = self.fromPos
-        posEnd = self.toPos
-        
-        topleftX = min(float(posStart.x()), float(posEnd.x()))
-        topleftY = min(float(posStart.y()), float(posEnd.y()))
-        self.prepareGeometryChange()
-        #self.setPos(QtCore.QPointF(topleftX, topleftY))
         
     def setFromPos(self, pointFrom):
         self.fromPos = QtCore.QPointF(pointFrom)
