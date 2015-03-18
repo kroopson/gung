@@ -3,8 +3,8 @@ from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack, QUndoCommand
 from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
 from gungnode import GungItem, GungPlug, GungNode, GungEdge, getGungNodeClasses
-
-
+import gc
+import sys
 import xml.dom.minidom as xmldom
 from xml.dom import Node
 
@@ -321,8 +321,12 @@ class GungCreateEdgeCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         createdEdge = self.scene.getNodeById(self.createdEdgeId)
+        print sys.getrefcount(createdEdge)
         createdEdge.disconnectEdge()
         self.scene.removeItem(createdEdge)
+        
+        gc.collect(createdEdge)
+        print createdEdge
         self.scene.update()
 
     def redo(self, *args, **kwargs):
