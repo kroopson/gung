@@ -9,6 +9,7 @@ versionString = "GUNG v.0.0.3"
 class GungGraphicsView(QtGui.QGraphicsView):
     undoSignal = Signal()
     redoSignal = Signal()
+    deleteSignal = Signal()
     def __init__(self, parent=None):
         QtGui.QGraphicsView.__init__(self, parent)
         self.previousMousePosition = None
@@ -167,6 +168,9 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
         if event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
             self.redoSignal.emit()
+            
+        if event.key() == QtCore.Qt.Key_Delete:
+            self.deleteSignal.emit()
 
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
@@ -192,6 +196,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
             scene.draggingStarted.connect(self.startDragging)
             self.undoSignal.connect(scene.undoCalled)
             self.redoSignal.connect(scene.redoCalled)
+            self.deleteSignal.connect(scene.deleteCalled)
         return QtGui.QGraphicsView.setScene(self, scene)
 
     @Slot(int)

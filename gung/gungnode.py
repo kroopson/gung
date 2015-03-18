@@ -347,37 +347,53 @@ class GungPlug(GungItem):
             for edge in self.edges:
                 if edge is None:
                     continue
-                edge.updatePosition()
+                if edge.itemTo is self:
+                    edge.prepareGeometryChange()
+                    edge.setToPos(self.mapToScene(self.boundingRect().center()))
+                if edge.itemFrom is self:
+                    edge.prepareGeometryChange()
+                    edge.setFromPos(self.mapToScene(self.boundingRect().center()))
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
 
 class GungEdge(GungItem):
-    def __init__(self, parent=None, scene=None):
+    def __init__(self, itemFromId, itemToId, parent=None, scene=None):
         GungItem.__init__(self, None, scene)
         
-        self.properties['itemFromId'] = -1
-        self.properties['itemToId'] = -1
+        self.properties['itemFromId'] = itemFromId
+        self.properties['itemToId'] = itemToId
         
         self.itemFrom = None
         self.itemTo = None
         
+        itemfrom = self.scene().getNodeById(int(itemFromId))
+        itemto = self.scene().getNodeById(int(itemToId))
+        
+        self.fromPos = itemfrom.mapToScene(QtCore.QPointF()) + itemfrom.boundingRect().center()
+        self.toPos = itemto.mapToScene(QtCore.QPointF()) + itemto.boundingRect().center()
+        
         self.edgePen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.setZValue(self.scene().topEdgeZ)
         self.scene().topEdgeZ += .0001
+        
+        self.brect = QtCore.QRectF()
     
     def reconnectEdge(self):
+
         if not self.properties['itemFromId'] == -1 and not self.properties['itemFromId'] == self.properties['nodeId']:
             self.itemFrom = self.scene().getNodeById(int(self.properties['itemFromId']))
             if not self.itemFrom is None:
                 self.itemFrom.edges.append(self)
+#                 pass
         if not self.properties['itemToId'] == -1 and not self.properties['itemToId'] == self.properties['nodeId']:
             self.itemTo = self.scene().getNodeById(int(self.properties['itemToId']))
             if not self.itemTo is None:
                 self.itemTo.edges.append(self)
+                pass
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
-        self.updatePosition()
-        self.update()
+        #self.updatePosition()
+#         self.update()
 
     def disconnectEdge(self):
         # TODO: Make it more loose coupled. Now it's a field for errors.
@@ -390,50 +406,51 @@ class GungEdge(GungItem):
     def paint(self, painter, option, widget=None):
         painter.setPen(self.edgePen)
 
-        if self.itemFrom is None or self.itemTo is None:
-            return 
+        #if self.itemFrom is None or self.itemTo is None:
+        #    return 
         
         posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
         posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
         
-        topleftX = min(posStart.x(), posEnd.x())
-        topleftY = min(posStart.y(), posEnd.y())
-        
-        bottomrightX = max(posStart.x(), posEnd.x())
-        bottomrightY = max(posStart.y(), posEnd.y())
-        
-        currentpos = self.mapToScene(QtCore.QPointF())
-        
-        painter.drawLine(posStart - currentpos, posEnd - currentpos )
+        painter.drawLine(posStart, posEnd)
     
     def updatePosition(self):
+        return
         if self.itemFrom is None or self.itemTo is None:
             return
         
-        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
-        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        #posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
+        #posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        posStart = self.fromPos
+        posEnd = self.toPos
         
-        topleftX = min(posStart.x(), posEnd.x())
-        topleftY = min(posStart.y(), posEnd.y())
+        topleftX = min(float(posStart.x()), float(posEnd.x()))
+        topleftY = min(float(posStart.y()), float(posEnd.y()))
+        self.prepareGeometryChange()
+        #self.setPos(QtCore.QPointF(topleftX, topleftY))
         
-        self.setPos(QtCore.QPointF(topleftX, topleftY))
+    def setFromPos(self, pointFrom):
+        self.fromPos = QtCore.QPointF(pointFrom)
+        
+        topleftX = min(float(self.fromPos.x()), float(self.toPos.x()))
+        topleftY = min(float(self.fromPos.y()), float(self.toPos.y()))
+        
+        bottomrightX = max(float(self.fromPos.x()), float(self.toPos.x()))
+        bottomrightY = max(float(self.fromPos.y()), float(self.toPos.y()))
+        self.brect = QtCore.QRectF(topleftX, topleftY, bottomrightX, bottomrightY)
+        
+    def setToPos(self, pointTo):
+        self.toPos = QtCore.QPointF(pointTo)
+        
+        topleftX = min(float(self.fromPos.x()), float(self.toPos.x()))
+        topleftY = min(float(self.fromPos.y()), float(self.toPos.y()))
+        
+        bottomrightX = max(float(self.fromPos.x()), float(self.toPos.x()))
+        bottomrightY = max(float(self.fromPos.y()), float(self.toPos.y()))
+        self.brect = QtCore.QRectF(topleftX, topleftY, bottomrightX, bottomrightY)
     
     def boundingRect(self, *args, **kwargs):
-        if self.flags() & QtGui.QGraphicsItem.ItemHasNoContents:
-            return QtCore.QRectF()
-        if self.itemFrom is None or self.itemTo is None:
-            return QtCore.QRectF()
-        
-        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
-        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
-        
-        topleftX = min(posStart.x(), posEnd.x())
-        topleftY = min(posStart.y(), posEnd.y())
-        
-        bottomrightX = max(posStart.x(), posEnd.x())
-        bottomrightY = max(posStart.y(), posEnd.y())
-
-        return QtCore.QRectF(0, 0, bottomrightX - topleftX, bottomrightY - topleftY)
+        return self.brect
 
 class GungNodeResizer(QtGui.QGraphicsItem):
     def __init__(self, parent=None, scene=None):

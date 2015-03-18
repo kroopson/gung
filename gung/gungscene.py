@@ -24,6 +24,7 @@ class GungScene(QGraphicsScene):
         self.undoStack = QUndoStack(self)
         
         self.highlightedPlugs = []
+        self.removedItems = []
         
 
     def getNewId(self):
@@ -234,6 +235,7 @@ class GungScene(QGraphicsScene):
             if edge is None:
                 continue
             if hititem in [edge.itemFrom, edge.itemTo]:
+                print edge
                 return
         for edge in hititem.edges:
             if edge is None:
@@ -245,6 +247,12 @@ class GungScene(QGraphicsScene):
 
         command = GungCreateEdgeCommand(self, self.dragFrom, hititem)
         self.undoStack.push(command)
+        
+    def removeEdge(self, edgeId):
+        createdEdge = self.getNodeById(edgeId)
+        createdEdge.disconnectEdge()
+        createdEdge.prepareGeometryChange()        
+        self.removeItem(createdEdge)
         
     def updateDraggingEdge(self, pos):
         self.draggingEdge.posEnd = pos
@@ -262,6 +270,12 @@ class GungScene(QGraphicsScene):
     def resizeNode(self, nodeId, size, previousSize):
         c = GungResizeNodeCommand(self, nodeId, size.x(), size.y(), previousSize.x(), previousSize.y())
         self.undoStack.push(c)
+
+    @Slot()
+    def deleteCalled(self):
+        sel = self.selectedItems()
+        for item in sel:
+            self.removeItem(item)
 
     @Slot()
     def redoCalled(self):
@@ -306,31 +320,26 @@ class GungMoveCommand(QUndoCommand):
 
 class GungCreateEdgeCommand(QUndoCommand):
     def __init__(self, scene, fromNode, toNode):
-        """
-        This dictionary has to hold the id's as the keys and positions as values.
-        i.e.
-        {
-        10 : [0,0,250,100]
-        }
-        """
         QUndoCommand.__init__(self)
         self.fromNodeId = int(fromNode.properties['nodeId'])
         self.toNodeId = int(toNode.properties['nodeId'])
         self.scene = scene
         self.createdEdgeId = -1
+        self.deletedEdge = None
 
     def undo(self, *args, **kwargs):
-        print "Undoing create edge"
-        createdEdge = self.scene.getNodeById(self.createdEdgeId)
-        createdEdge.disconnectEdge()
-        self.scene.removeItem(createdEdge)
+        self.scene.removeEdge(self.createdEdgeId)
+        for i in self.scene.items():
+            if isinstance(i,GungEdge):
+                print i
 
     def redo(self, *args, **kwargs):
-        e = GungEdge(parent=None, scene=self.scene)
-        e.properties['itemFromId'] = int(self.fromNodeId)
-        e.properties['itemToId'] = int(self.toNodeId)
+        e = GungEdge(int(self.fromNodeId), int(self.toNodeId), parent=None, scene=self.scene)
         e.reconnectEdge()
         self.createdEdgeId = int(e.properties['nodeId'])
+        for i in self.scene.items():
+            if isinstance(i,GungEdge):
+                print i
 
 class GungResizeNodeCommand(QUndoCommand):
     def __init__(self, scene, nodeId, width, height, previousWith, previousHeight):
