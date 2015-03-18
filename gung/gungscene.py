@@ -180,8 +180,8 @@ class GungScene(QGraphicsScene):
 
             #--- keep current position in the values of a dictionary so that this node will not be collected as moved
             #--- next time when scene checks if some nodes have moved.
-            node.properties['posX'] = nodepos.x()
-            node.properties['posY'] = nodepos.y()
+            node.properties['posX'] = float(nodepos.x())
+            node.properties['posY'] = float(nodepos.y())
 
         self.undoStack.push(undo)
         self.nodesHaveMoved = False
@@ -320,14 +320,13 @@ class GungCreateEdgeCommand(QUndoCommand):
         self.createdEdgeId = -1
 
     def undo(self, *args, **kwargs):
+        print "Undoing create edge"
         createdEdge = self.scene.getNodeById(self.createdEdgeId)
         print sys.getrefcount(createdEdge)
         createdEdge.disconnectEdge()
         self.scene.removeItem(createdEdge)
-        
-        gc.collect(createdEdge)
-        print createdEdge
-        self.scene.update()
+        #self.scene.update()
+        print "undo done. updating"
 
     def redo(self, *args, **kwargs):
         e = GungEdge(parent=None, scene=self.scene)
@@ -338,13 +337,6 @@ class GungCreateEdgeCommand(QUndoCommand):
 
 class GungResizeNodeCommand(QUndoCommand):
     def __init__(self, scene, nodeId, width, height, previousWith, previousHeight):
-        """
-        This dictionary has to hold the id's as the keys and positions as values.
-        i.e.
-        {
-        10 : [0,0,250,100]
-        }
-        """
         QUndoCommand.__init__(self)
         self.nodeId = int(nodeId)
         self.width = float(width)
