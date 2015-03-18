@@ -322,11 +322,8 @@ class GungCreateEdgeCommand(QUndoCommand):
     def undo(self, *args, **kwargs):
         print "Undoing create edge"
         createdEdge = self.scene.getNodeById(self.createdEdgeId)
-        print sys.getrefcount(createdEdge)
         createdEdge.disconnectEdge()
         self.scene.removeItem(createdEdge)
-        #self.scene.update()
-        print "undo done. updating"
 
     def redo(self, *args, **kwargs):
         e = GungEdge(parent=None, scene=self.scene)
