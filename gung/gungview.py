@@ -4,7 +4,8 @@ from PySide.QtGui import QDrag
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
-versionString = "GUNG v.0.0.3"
+versionString = "GUNG v.0.0.5"
+
 
 class GungGraphicsView(QtGui.QGraphicsView):
     undoSignal = Signal()

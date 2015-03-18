@@ -244,6 +244,20 @@ class GungNode(GungItem):
                     continue
                 result += subitem.edges
         return result
+    
+    def getAllPlugs(self):
+        """
+        Returns all plugs for this node.
+        """
+        result = []
+        for item in self.childItems():
+            if not isinstance(item, GungAttribute):
+                continue
+            for subitem in item.childItems():
+                if not isinstance(subitem, GungPlug):
+                    continue
+                result.append(subitem)
+        return result
 
 
 
@@ -381,8 +395,8 @@ class GungEdge(GungItem):
         self.itemFrom = None
         self.itemTo = None
         
-        itemfrom = self.scene().getNodeById(int(itemFromId))
-        itemto = self.scene().getNodeById(int(itemToId))
+        itemfrom = self.scene().getItemById(int(itemFromId))
+        itemto = self.scene().getItemById(int(itemToId))
         
         self.fromPos = itemfrom.mapToScene(QtCore.QPointF()) + itemfrom.boundingRect().center()
         self.toPos = itemto.mapToScene(QtCore.QPointF()) + itemto.boundingRect().center()
@@ -396,12 +410,12 @@ class GungEdge(GungItem):
     def reconnectEdge(self):
 
         if not self.properties['itemFromId'] == -1 and not self.properties['itemFromId'] == self.properties['nodeId']:
-            self.itemFrom = self.scene().getNodeById(int(self.properties['itemFromId']))
+            self.itemFrom = self.scene().getItemById(int(self.properties['itemFromId']))
             if not self.itemFrom is None:
                 self.itemFrom.edges.append(self)
 #                 pass
         if not self.properties['itemToId'] == -1 and not self.properties['itemToId'] == self.properties['nodeId']:
-            self.itemTo = self.scene().getNodeById(int(self.properties['itemToId']))
+            self.itemTo = self.scene().getItemById(int(self.properties['itemToId']))
             if not self.itemTo is None:
                 self.itemTo.edges.append(self)
                 pass

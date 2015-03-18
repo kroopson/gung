@@ -49,6 +49,8 @@ class TestSequenceFunctions(unittest.TestCase):
         Checks if scene serialization works fine.
         """
         scene = GungScene(self.view)
+        
+        nodes = []
         for i in range(1):
             node = GungNode("test%i" % i, None, scene)
             node.setX(i * 105)
@@ -57,11 +59,7 @@ class TestSequenceFunctions(unittest.TestCase):
                 GungPlug(a, scene)
                 a.rearrangePlugs()
             node.rearrangeAttributes()
-        
-        e = GungEdge(scene=scene)
-        e.properties['itemFromId'] = 19
-        e.properties['itemToId'] = 33
-        e.reconnectEdge()
+            nodes.append(node)
         
         scenexml = scene.asXml()
         
@@ -73,9 +71,9 @@ class TestSequenceFunctions(unittest.TestCase):
     def testGetNodeById(self):
         scene = GungScene(self.view)
         node = GungNode("test%i", None, scene)
-        self.assert_(scene.getNodeById(0) == node, "Failed to get the node by Id")
+        self.assert_(scene.getItemById(0) == node, "Failed to get the node by Id")
         nodeB = GungNode("test%i", None, scene)
-        self.assert_(scene.getNodeById(1) == nodeB, "Failed to get the second node by Id")
+        self.assert_(scene.getItemById(1) == nodeB, "Failed to get the second node by Id")
     
     def tearDown(self):
         self.w.close()

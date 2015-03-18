@@ -43,7 +43,8 @@ class GungScene(QGraphicsScene):
 
         return index
 
-    def getNodeById(self, id_):
+    def getItemById(self, id_):
+        
         for item in self.items():
             if not isinstance(item, GungItem):
                 continue
@@ -107,7 +108,6 @@ class GungScene(QGraphicsScene):
         self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
         
     def mouseMoveEvent(self, event):
-        
         if event.buttons() == QtCore.Qt.MidButton:
             return QGraphicsScene.mouseMoveEvent(self, event)
         if event.buttons() == QtCore.Qt.RightButton:
@@ -116,7 +116,7 @@ class GungScene(QGraphicsScene):
         if self.isDragging:
             self.updateDraggingEdge(event.scenePos())
         
-            plug = self.getPlugInPoint(event.scenePos())
+            plug = self.getPlugAtPoint(event.scenePos())
             
             highlightedPlug = None
             
@@ -155,8 +155,11 @@ class GungScene(QGraphicsScene):
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def checkIfNodesMoved(self):
-        #--- iterate all the nodes to see if they positions changed in comparison to the
-        #--- position values that they have stored in properties dictionary
+        """
+        Iterate all the nodes to see if they positions changed in comparison to the
+        position values that they have stored in properties dictionary
+        """
+        
         nodesThatHaveMoved = []
         for item in self.items():
             if not isinstance(item, GungNode):
@@ -187,8 +190,9 @@ class GungScene(QGraphicsScene):
         self.undoStack.push(undo)
         self.nodesHaveMoved = False
         
-    def getPlugInPoint(self, pos):
-        """Iterate all the items that occlude with the point passed as pos and see if there is a GungPlug among them.
+    def getPlugAtPoint(self, pos):
+        """
+        Iterate all the items that occlude with the point passed as pos and see if there is a GungPlug among them.
         If not then return None
         @param pos: QPoint
         @return GungNode or None
@@ -201,6 +205,7 @@ class GungScene(QGraphicsScene):
             if isinstance(hi, GungPlug):
                 hititem = hi
                 break
+            
         return hititem
 
     def draggingEnded(self, pos):
@@ -212,7 +217,7 @@ class GungScene(QGraphicsScene):
         #--- stop displaying the utility edge
         self.hideDraggingEdge()
         
-        hititem = self.getPlugInPoint(pos)
+        hititem = self.getPlugAtPoint(pos)
         
         #--- stop if no plug is found
         if hititem is None:
@@ -249,7 +254,7 @@ class GungScene(QGraphicsScene):
         self.undoStack.push(command)
         
     def removeEdge(self, edgeId):
-        createdEdge = self.getNodeById(edgeId)
+        createdEdge = self.getItemById(edgeId)
         if createdEdge is None:
             return
         createdEdge.disconnectEdge()
@@ -308,7 +313,7 @@ class GungMoveCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         for n in self.nodes.keys():
-            gnode = self.scene.getNodeById(n)
+            gnode = self.scene.getItemById(n)
             gnode.setX(self.nodes[n][0])
             gnode.setY(self.nodes[n][1])
             gnode.properties['posX'] = self.nodes[n][0]
@@ -317,7 +322,7 @@ class GungMoveCommand(QUndoCommand):
 
     def redo(self, *args, **kwargs):
         for n in self.nodes.keys():
-            gnode = self.scene.getNodeById(n)
+            gnode = self.scene.getItemById(n)
             gnode.setX(self.nodes[n][2])
             gnode.setY(self.nodes[n][3])
             gnode.properties['posX'] = self.nodes[n][2]
@@ -326,6 +331,9 @@ class GungMoveCommand(QUndoCommand):
 
 
 class GungDeleteItemsCommand(QUndoCommand):
+    """
+    Removes items provided to the constructor.
+    """
     def __init__(self, scene, nodes):
         QUndoCommand.__init__(self)
         self.scene = scene
@@ -341,7 +349,6 @@ class GungDeleteItemsCommand(QUndoCommand):
             self.scene.addItem(e)
             e.reconnectEdge()
             
-
     def redo(self, *args, **kwargs):
         edgesToDelete = []
         for n in self.nodes:
@@ -359,6 +366,9 @@ class GungDeleteItemsCommand(QUndoCommand):
 
 
 class GungCreateEdgeCommand(QUndoCommand):
+    """
+    Creates an edge between two plugs provided in the constructor.
+    """
     def __init__(self, scene, fromNode, toNode):
         QUndoCommand.__init__(self)
         self.fromNodeId = int(fromNode.properties['nodeId'])
@@ -382,6 +392,9 @@ class GungCreateEdgeCommand(QUndoCommand):
                 print i
 
 class GungResizeNodeCommand(QUndoCommand):
+    """
+    Resizes the node.
+    """
     def __init__(self, scene, nodeId, width, height, previousWith, previousHeight):
         QUndoCommand.__init__(self)
         self.nodeId = int(nodeId)
@@ -392,16 +405,20 @@ class GungResizeNodeCommand(QUndoCommand):
         self.scene = scene
 
     def undo(self, *args, **kwargs):
-        node = self.scene.getNodeById(self.nodeId)
+        node = self.scene.getItemById(self.nodeId)
         node.resizer.setX(self.previousWidth - node.resizer.itemWidth)
         node.resizer.setY(self.previousHeight - node.resizer.itemHeight)
 
     def redo(self, *args, **kwargs):
-        node = self.scene.getNodeById(self.nodeId)
+        node = self.scene.getItemById(self.nodeId)
         node.resizer.setX(self.width - node.resizer.itemWidth)
         node.resizer.setY(self.height - node.resizer.itemHeight)
 
 class GungDragEdge(QGraphicsItem):
+    """
+    Graphics item that is responsible for displaying the rubber band edge (used to visually
+    create connections).
+    """
     def __init__(self, scene=None):
         QGraphicsItem.__init__(self, None, scene)
 
