@@ -419,6 +419,8 @@ class GungEdge(GungItem):
         self.setPos(QtCore.QPointF(topleftX, topleftY))
     
     def boundingRect(self, *args, **kwargs):
+        if self.flags() & QtGui.QGraphicsItem.ItemHasNoContents:
+            return QtCore.QRectF()
         if self.itemFrom is None or self.itemTo is None:
             return QtCore.QRectF()
         
