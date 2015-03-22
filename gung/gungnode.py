@@ -14,6 +14,90 @@ def getGungNodeClasses():
     return gungClasses
 
 
+class GungNodeResizer(QtGui.QGraphicsItem):
+    """
+    A small widget displayed in a bottom right corner of the node. When it is moved
+    it will resize the parent GungNode.
+    """
+    def __init__(self, parent=None, scene=None):
+        QtGui.QGraphicsItem.__init__(self, parent=parent, scene=scene)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
+        self.storedPos = QtCore.QPointF()
+
+        # TODO: Store this in some settings.
+        self.itemWidth = 10
+        self.itemHeight = 10
+
+        self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+
+        self.sizePoint = QPoint(self.itemWidth, self.itemHeight)
+
+    def mousePressEvent(self, *args, **kwargs):
+        self.setCursor(QtCore.Qt.SizeFDiagCursor)
+        self.storedPos = self.pos()
+        return QtGui.QGraphicsItem.mousePressEvent(self, *args, **kwargs)
+
+    def mouseReleaseEvent(self, *args, **kwargs):
+        self.unsetCursor()
+        p = self.pos()
+        if p != self.storedPos:
+            #--- When this item position is changed call the trigger signal resizeNode.
+            #--- This allows undo/redo of this command.
+            self.scene().resizeNode(self.parentItem().properties['nodeId'], p + self.sizePoint, self.storedPos + self.sizePoint)
+        return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
+
+    def paint(self, painter, option, widget=None):
+        """
+        Override of a paint class from QGraphicsItem.
+        Implement this to give a resizer the desired look.
+        """
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        # draw body of a node
+        if self.parentItem().isSelected():
+            painter.setPen(self.parentItem().selectedPen)
+        else:
+            painter.setPen(self.parentItem().unselectedPen)
+        painter.setBrush(self.brush )
+
+        painter.drawPolygon([QPoint(self.itemWidth - 1, self.itemHeight - 1),
+                             QPoint(self.itemWidth-1, 0),
+                             QPoint(0, self.itemHeight-1)],
+                            QtCore.Qt.OddEvenFill)
+
+    def boundingRect(self):
+        return QtCore.QRectF(0, 0, self.itemWidth, self.itemHeight )
+
+    def itemChange(self, change, value):
+        """
+        Called whenever a change happens to the instance of this class like move, click, resize ect.
+        In this case used to resize the parent node and to limit the position to the minimal size constraints
+        of a node.
+        :param change: defines a type of a change
+        :param value: defines a value of a change
+        :return: QVariant
+        """
+        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+            parentMinWidth = self.parentItem().properties['minimalWidth'] - self.itemWidth
+            parentMinHeight = self.parentItem().properties['minimalHeight'] - self.itemHeight
+
+
+            if value.x() < parentMinWidth:
+                value.setX(parentMinWidth)
+                self.setX(parentMinWidth)
+
+            if value.y() < parentMinHeight:
+                value.setY(parentMinHeight)
+                self.setY(parentMinHeight)
+            self.parentItem().setSize(self.pos() + self.sizePoint)
+
+        return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+
+
+
 class GungItem(QtGui.QGraphicsItem):
     elementType = "GungNode"
     
@@ -77,6 +161,7 @@ class GungItem(QtGui.QGraphicsItem):
 
 class GungNode(GungItem):
     elementType = "GungNode"
+    resizerClass = GungNodeResizer
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
     """
@@ -91,15 +176,16 @@ class GungNode(GungItem):
         self.properties['minimalWidth'] = 0.0
         self.properties['minimalHeight'] = 0.0
 
+        self.bboxW = 0.0
+        self.bboxH = 0.0
+
         # TODO: settings file implementation
         self.color = QtGui.QColor(76, 118, 150)
         self.lightGrayBrush = QtGui.QBrush(self.color)
         self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
 
         self.selectedPen = QtGui.QPen(QtGui.QColor(255, 255, 255))
-        self.selectedPen.setWidth(2)
         self.unselectedPen = QtGui.QPen(QtGui.QColor(58, 57, 57))
-        self.unselectedPen.setWidth(2)
         self.textPen = QtGui.QPen(QtGui.QColor(255, 255, 255))
 
         self.plugFont = QtGui.QFont("Arial", 7)
@@ -133,7 +219,7 @@ class GungNode(GungItem):
         Adds a special type of child item that will control the size of this node.
         This is a typical behaviour of a node systems, that allows you to resize the nodes with a small widget.
         """
-        self.resizer = GungNodeResizer(self, self.scene())
+        self.resizer = self.resizerClass(self, self.scene())
         self.resizer.setX(self.properties['nodeWidth'] - self.resizer.itemWidth)
         self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
 
@@ -159,7 +245,7 @@ class GungNode(GungItem):
             if currentheight == -1:
                 currentheight = 20
 
-            childitem.setX(1)
+            childitem.setX(0)
             childitem.setY(currentheight)
             currentheight += childitem.properties['attrHeight'] + 2
 
@@ -213,14 +299,14 @@ class GungNode(GungItem):
             painter.setPen(self.unselectedPen)
 
         painter.setBrush(self.darkGrayBrush)
-        painter.drawRect(0, 0, self.properties['nodeWidth'] - 1, self.properties['nodeHeight'] - 1)
+        painter.drawRect(0, 0, self.properties['nodeWidth'], self.properties['nodeHeight'])
 
         # draw name of an element
         painter.setPen(self.textPen)
         painter.drawText(5, 15, self.properties['name'])
 
     def boundingRect(self):
-        return QtCore.QRectF(-1, -1, self.bboxW + 1, self.bboxH + 1)
+        return QtCore.QRectF(0, 0 , self.bboxW , self.bboxH )
 
     def itemChange(self, change, value):
         """
@@ -311,8 +397,7 @@ class GungAttribute(GungItem):
         parentBounding = self.parentItem().boundingRect()
         index = 1
         for p in outplugs:
-            w = index * p.properties['plugWidth']
-            w += (p.properties['plugWidth'] / 2) - 1  # some shitty hardcoding...
+            w = (index * p.properties['plugWidth']) + 1
             p.setX(parentBounding.width() - w)
             p.setY(0)
             totalWidth += p.properties['plugWidth']
@@ -326,7 +411,7 @@ class GungAttribute(GungItem):
         Override this in child classes.
         """
 
-        return QtCore.QRectF(0, 0, self.parentItem().properties['nodeWidth'] - 4, self.properties['attrHeight'])
+        return QtCore.QRectF(0, 0, self.parentItem().properties['nodeWidth'], self.properties['attrHeight'])
 
 
 class GungPlug(GungItem):
@@ -378,14 +463,14 @@ class GungPlug(GungItem):
             painter.setBrush(self.highlightedPlugBrush)
         else:
             painter.setBrush(self.plugBrush)    
-        painter.drawRect(1, 1, self.properties['plugWidth'] - 1, self.properties['plugHeight'] - 1)
+        painter.drawRect(0, 0, self.properties['plugWidth'], self.properties['plugHeight'])
 
     def setHighlighted(self, state):
         self.isHighlighted = state
         self.update()
 
     def boundingRect(self, *args, **kwargs):
-        return QtCore.QRectF(-1, -1, self.properties['plugWidth'] + 1, self.properties['plugHeight'] + 1)
+        return QtCore.QRectF(0, 0, self.properties['plugWidth'], self.properties['plugHeight'])
     
     def itemChange(self, change, value):
         """
@@ -494,80 +579,4 @@ class GungEdge(GungItem):
     
     def boundingRect(self, *args, **kwargs):
         return self.brect
-
-class GungNodeResizer(QtGui.QGraphicsItem):
-    def __init__(self, parent=None, scene=None):
-        QtGui.QGraphicsItem.__init__(self, parent=parent, scene=scene)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
-        self.storedPos = QtCore.QPointF()
-
-        self.itemWidth = 10
-        self.itemHeight = 10
-
-        self.sizePoint = QPoint(self.itemWidth, self.itemHeight)
-
-        self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
-        self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
-        
-    def mousePressEvent(self, *args, **kwargs):
-        self.setCursor(QtCore.Qt.SizeFDiagCursor)
-        self.storedPos = self.pos()
-        return QtGui.QGraphicsItem.mousePressEvent(self, *args, **kwargs)
-    
-    def mouseReleaseEvent(self, *args, **kwargs):
-        self.unsetCursor()
-        p = self.pos()
-        if p != self.storedPos:
-            self.scene().resizeNode(self.parentItem().properties['nodeId'], p + self.sizePoint, self.storedPos + self.sizePoint)
-        return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
-
-    def paint(self, painter, option, widget=None):
-        """
-        Override of a paint class from QGraphicsItem.
-        Implement this to give a resizer the desired look.
-        """
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
-        # draw body of a node
-        if self.parentItem().isSelected():
-            painter.setPen(self.parentItem().selectedPen)
-        else:
-            painter.setPen(self.parentItem().unselectedPen)
-        painter.setBrush(self.brush )
-
-        painter.drawPolygon([QPoint(self.itemWidth - 1, self.itemHeight - 1),
-                             QPoint(self.itemWidth-1, 0),
-                             QPoint(0, self.itemHeight-1)],
-                            QtCore.Qt.OddEvenFill)
-
-    def boundingRect(self):
-        return QtCore.QRectF(0, 0, self.itemWidth, self.itemHeight )
-
-    def itemChange(self, change, value):
-        """
-        Called whenever a change happens to the instance of this class like move, click, resize ect.
-        In this case used to resize the parent node and to limit the position to the minimal size constraints
-        of a node.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :return: QVariant
-        """
-        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            parentMinWidth = self.parentItem().properties['minimalWidth'] - self.itemWidth
-            parentMinHeight = self.parentItem().properties['minimalHeight'] - self.itemHeight
-
-            
-            if value.x() < parentMinWidth:
-                value.setX(parentMinWidth)
-                self.setX(parentMinWidth)
-
-            if value.y() < parentMinHeight:
-                value.setY(parentMinHeight)
-                self.setY(parentMinHeight)
-            # TODO: store the current width and height of the node
-            self.parentItem().setSize(self.pos() + self.sizePoint)
-            # TODO: create the QUndoCommand that will undo/redo this.
-
-        return QtGui.QGraphicsItem.itemChange(self, change, value)
 

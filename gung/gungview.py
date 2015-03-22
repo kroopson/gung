@@ -194,22 +194,17 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def setScene(self, scene):
         if isinstance(scene, GungScene):
-            scene.draggingStarted.connect(self.startDragging)
+            #scene.draggingStarted.connect(self.startDragging)
             self.undoSignal.connect(scene.undoCalled)
             self.redoSignal.connect(scene.redoCalled)
             self.deleteSignal.connect(scene.deleteCalled)
         return QtGui.QGraphicsView.setScene(self, scene)
 
-    @Slot(int)
-    def startDragging(self, itemid):
-        drag = QDrag(self)
-        data = QMimeData()
-        data.setText(str(itemid))
-        drag.setMimeData(data)
-        drag.exec_()
-
-    #def dragMoveEvent(self, event):
-    #    #print "Dragging something"
-    #    self.scene().updateDraggingEdge(self.mapToScene(event.pos()))
-
+    # @Slot(int)
+    # def startDragging(self, itemid):
+    #     drag = QDrag(self)
+    #     data = QMimeData()
+    #     data.setText(str(itemid))
+    #     drag.setMimeData(data)
+    #     drag.exec_()
 
