@@ -171,6 +171,11 @@ class GungNode(GungItem):
         self.properties['nodeHeight'] = self.properties['minimalHeight']
         self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
 
+        for childitem in self.childItems():
+            if not isinstance(childitem, GungAttribute):
+                continue
+            childitem.rearrangePlugs()
+
     def mousePressEvent(self, event):
         self.scene().topZ += .0001
         self.setZValue(self.scene().topZ)
@@ -185,17 +190,18 @@ class GungNode(GungItem):
         self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
 
     def setSize(self, size):
-        growing = False
-        if size.x() >= self.properties['nodeWidth'] or size.y() >= self.properties['nodeHeight']:
-            growing = True
+        #growing = False
+        #if size.x() >= self.properties['nodeWidth'] or size.y() >= self.properties['nodeHeight']:
+        #    growing = True
 
         self.properties['nodeWidth'] = size.x()
         self.properties['nodeHeight'] = size.y()
         self.update()
 
+        self.prepareGeometryChange()
         self.updateBBox()
-        if growing:
-            self.update()
+
+        self.rearrangeAttributes()
 
     def paint(self, painter, option, widget=None):
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
@@ -283,11 +289,31 @@ class GungAttribute(GungItem):
         if not len(plugs):
             return
 
+        inplugs = []
+        outplugs = []
+
+        for p in plugs:
+            if isinstance(p, GungOutPlug):
+                outplugs.append(p)
+                continue
+            if isinstance(p, GungPlug):
+                inplugs.append(p)
+
         index = 0
         totalWidth = 0
-        for p in plugs:
+        for p in inplugs:
             w = index * p.properties['plugWidth']
             p.setX(w)
+            p.setY(0)
+            totalWidth += p.properties['plugWidth']
+            index += 1
+
+        parentBounding = self.parentItem().boundingRect()
+        index = 1
+        for p in outplugs:
+            w = index * p.properties['plugWidth']
+            w += (p.properties['plugWidth'] / 2) - 1  # some shitty hardcoding...
+            p.setX(parentBounding.width() - w)
             p.setY(0)
             totalWidth += p.properties['plugWidth']
             index += 1
@@ -305,7 +331,7 @@ class GungAttribute(GungItem):
 
 class GungPlug(GungItem):
     elementType = "GungPlug"
-    acceptsConnections = "GungPlug"
+    acceptsConnections = "GungOutPlug"
     
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
@@ -383,6 +409,14 @@ class GungPlug(GungItem):
                     edge.setFromPos(self.mapToScene(self.boundingRect().center()))
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+
+class GungOutPlug(GungPlug):
+    elementType = "GungOutPlug"
+    acceptsConnections = "GungPlug"
+
+    def __init__(self, parent=None, scene=None):
+        GungPlug.__init__(self, parent=parent, scene=scene)
 
 
 class GungEdge(GungItem):

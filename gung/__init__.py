@@ -97,7 +97,7 @@ testgung_xml = """<?xml version="1.0" ?>
             <GungPlug nodeId="19" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
         </GungAttribute>
         <GungAttribute attrHeight="15" nodeId="20" posX="1.0" posY="54.0">
-            <GungPlug nodeId="21" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
+            <GungOutPlug nodeId="21" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
         </GungAttribute>
     </GungNode>
     <GungNode minimalHeight="55" minimalWidth="0.0" name="test2" nodeHeight="55.0" nodeId="14" nodeWidth="100.0" posX="210.0" posY="150.0"/>
@@ -117,10 +117,10 @@ testgung_xml = """<?xml version="1.0" ?>
             <GungPlug nodeId="2" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
         </GungAttribute>
         <GungAttribute attrHeight="15" nodeId="3" posX="1.0" posY="37.0">
-            <GungPlug nodeId="4" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
+            <GungOutPlug nodeId="4" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
         </GungAttribute>
         <GungAttribute attrHeight="15" nodeId="5" posX="1.0" posY="54.0">
-            <GungPlug nodeId="6" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
+            <GungOutPlug nodeId="6" plugHeight="14" plugWidth="14" posX="0.0" posY="0.0"/>
         </GungAttribute>
     </GungNode>
 </GungGraph>
