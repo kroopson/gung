@@ -400,13 +400,13 @@ class GungResizeNodeCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         node = self.scene.getItemById(self.nodeId)
-        node.resizer.setX(self.previousWidth - node.resizer.itemWidth)
-        node.resizer.setY(self.previousHeight - node.resizer.itemHeight)
+        node.resizer.setX(self.previousWidth)
+        node.resizer.setY(self.previousHeight)
 
     def redo(self, *args, **kwargs):
         node = self.scene.getItemById(self.nodeId)
-        node.resizer.setX(self.width - node.resizer.itemWidth)
-        node.resizer.setY(self.height - node.resizer.itemHeight)
+        node.resizer.setX(self.width)
+        node.resizer.setY(self.height)
 
 class GungDragEdge(QGraphicsItem):
     """

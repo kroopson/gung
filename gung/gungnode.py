@@ -32,8 +32,8 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         self.storedPos = QtCore.QPointF()
 
         # TODO: Store this in some settings.
-        self.itemWidth = 10
-        self.itemHeight = 10
+        self.itemWidth = config.getfloat("Resizer", "Width")
+        self.itemHeight = config.getfloat("Resizer", "Height")
 
         self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
@@ -51,8 +51,8 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         if p != self.storedPos:
             # --- When this item position is changed call the trigger signal resizeNode.
             #--- This allows undo/redo of this command.
-            self.scene().resizeNode(self.parentItem().properties['nodeId'], p + self.sizePoint,
-                                    self.storedPos + self.sizePoint)
+            self.scene().resizeNode(self.parentItem().properties['nodeId'], p,
+                                    self.storedPos)
         return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
     def paint(self, painter, option, widget=None):
@@ -68,13 +68,13 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             painter.setPen(self.parentItem().unselectedPen)
         painter.setBrush(self.brush)
 
-        painter.drawPolygon([QPoint(self.itemWidth - 1, self.itemHeight - 1),
-                             QPoint(self.itemWidth - 1, 0),
-                             QPoint(0, self.itemHeight - 1)],
+        painter.drawPolygon([QPoint(0, 0),
+                             QPoint(-self.itemWidth, 0),
+                             QPoint(0, -self.itemHeight)],
                             QtCore.Qt.OddEvenFill)
 
     def boundingRect(self):
-        return QtCore.QRectF(0, 0, self.itemWidth, self.itemHeight)
+        return QtCore.QRectF(-self.itemWidth, -self.itemHeight, self.itemWidth, self.itemHeight)
 
     def itemChange(self, change, value):
         """
@@ -86,8 +86,8 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            parentMinWidth = self.parentItem().properties['minimalWidth'] - self.itemWidth
-            parentMinHeight = self.parentItem().properties['minimalHeight'] - self.itemHeight
+            parentMinWidth = self.parentItem().properties['minimalWidth']
+            parentMinHeight = self.parentItem().properties['minimalHeight']
 
             if value.x() < parentMinWidth:
                 value.setX(parentMinWidth)
@@ -96,7 +96,7 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             if value.y() < parentMinHeight:
                 value.setY(parentMinHeight)
                 self.setY(parentMinHeight)
-            self.parentItem().setSize(self.pos() + self.sizePoint)
+            self.parentItem().setSize(self.pos())
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
@@ -235,8 +235,8 @@ class GungNode(GungItem):
         This is a typical behaviour of a node systems, that allows you to resize the nodes with a small widget.
         """
         self.resizer = self.resizerClass(self, self.scene())
-        self.resizer.setX(self.properties['nodeWidth'] - self.resizer.itemWidth)
-        self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
+        self.resizer.setX(self.properties['nodeWidth'])
+        self.resizer.setY(self.properties['nodeHeight'])
 
     def updateBBox(self):
         self.bboxW = self.properties['nodeWidth']
@@ -261,8 +261,9 @@ class GungNode(GungItem):
         else:
             self.properties['minimalHeight'] = 35 + 20.0
 
-        self.properties['nodeHeight'] = self.properties['minimalHeight']
-        self.resizer.setY(self.properties['minimalHeight'] - self.resizer.itemHeight)
+        if self.properties['nodeHeight'] < self.properties['minimalHeight']:
+            self.properties['nodeHeight'] = self.properties['minimalHeight']
+            self.resizer.setY(self.properties['minimalHeight'])
 
         for childitem in self.childItems():
             if not isinstance(childitem, GungAttribute):
@@ -279,8 +280,8 @@ class GungNode(GungItem):
 
     def fromXml(self, xmlnode):
         GungItem.fromXml(self, xmlnode)
-        self.resizer.setX(self.properties['nodeWidth'] - self.resizer.itemWidth)
-        self.resizer.setY(self.properties['nodeHeight'] - self.resizer.itemHeight)
+        self.resizer.setX(self.properties['nodeWidth'])
+        self.resizer.setY(self.properties['nodeHeight'])
 
     def setSize(self, size):
         """
