@@ -184,14 +184,14 @@ class GungNode(GungItem):
         self.bboxW = config.getfloat("Node", "MinimalWidth")
         self.bboxH = config.getfloat("Node", "MinimalHeight")
 
-        # TODO: settings file implementation
-        self.color = QtGui.QColor(76, 118, 150)
-        self.lightGrayBrush = QtGui.QBrush(self.color)
+        self.nodeColor = self.getColorConfig("Node", "NodeColor")
+        self.lightGrayBrush = QtGui.QBrush(self.nodeColor)
         self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
 
-        self.selectedPen = QtGui.QPen(QtGui.QColor(255, 255, 255))
-        self.unselectedPen = QtGui.QPen(QtGui.QColor(58, 57, 57))
-        self.textPen = QtGui.QPen(QtGui.QColor(255, 255, 255))
+
+        self.selectedPen = QtGui.QPen(self.getColorConfig("Node", "SelectedEdgeColor"))
+        self.unselectedPen = QtGui.QPen(self.getColorConfig("Node", "UnSelectedEdgeColor"))
+        self.textPen = QtGui.QPen(self.getColorConfig("Node", "TextColor"))
 
         self.plugFont = QtGui.QFont("Arial", 7)
 
@@ -205,6 +205,15 @@ class GungNode(GungItem):
 
         self.createResizer()
         self.updateBBox()
+
+    def getColorConfig(self, section, option):
+        try:
+            nodecolor = config.get(section, option)
+            r,g,b = [int(x) for x in nodecolor.split(",")]
+        except:
+            print "Failed to get the node color", section, option
+            r,g,b = (0,0,0,)
+        return QtGui.QColor(r,g,b,)
 
     def requestMinimumWidth(self, minimumWidth):
 
@@ -301,7 +310,7 @@ class GungNode(GungItem):
         else:
             painter.setPen(self.unselectedPen)
 
-        painter.setBrush(self.darkGrayBrush)
+        painter.setBrush(self.nodeColor)
         painter.drawRect(0, 0, self.properties['nodeWidth'], self.properties['nodeHeight'])
 
         #--- Draw name of the node
