@@ -509,6 +509,39 @@ class GungPlug(GungItem):
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
 
+class GungGroup(GungItem):
+    elementType = "GungGroup"
+    def __init__(self, parent=None, scene=None, nodeId=None):
+        """
+        Base class to inherit if you want to create your own groups.
+        """
+        QtGui.QGraphicsItem.__init__(self, parent, scene)
+        self.rect = QtCore.QRectF()
+
+    def updateBoundingRect(self):
+        rect = None
+        for item in self.childItems(): # iterate only groups and nodes
+            if not isinstance(item, GungNode) and not isinstance(item, GungGroup):
+                continue
+
+            #--- get the bounding box of all items.
+            if rect is None:
+                rect = item.boundingRect()
+                continue
+            rect = rect.united(item.boundingRect())
+        if rect is None:
+            self.rect = QtCore.QRectF()
+        else:
+            self.rect = QtCore.QRectF(rect)
+        self.update()
+
+    def paint(self, painter, widget):
+        pass
+
+    def boundingRect(self):
+        return self.rect
+
+
 class GungOutPlug(GungPlug):
     elementType = "GungOutPlug"
     acceptsConnections = "GungPlug"

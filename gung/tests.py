@@ -9,7 +9,7 @@ from PySide.QtGui import QApplication
 
 
 class TestSequenceFunctions(unittest.TestCase):
-    app =QApplication([]) 
+    app = QApplication([])
 
     def setUp(self):
         
