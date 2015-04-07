@@ -11,6 +11,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
     undoSignal = Signal()
     redoSignal = Signal()
     deleteSignal = Signal()
+    groupSignal = Signal()
+
     def __init__(self, parent=None):
         QtGui.QGraphicsView.__init__(self, parent)
         self.previousMousePosition = None
@@ -173,6 +175,9 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if event.key() == QtCore.Qt.Key_Delete:
             self.deleteSignal.emit()
 
+        if event.key() == QtCore.Qt.Key_G and event.modifiers() == QtCore.Qt.ControlModifier:
+            self.groupSignal.emit()
+
         return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def drawBackground(self, painter, rect):
@@ -198,6 +203,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.undoSignal.connect(scene.undoCalled)
             self.redoSignal.connect(scene.redoCalled)
             self.deleteSignal.connect(scene.deleteCalled)
+            self.groupSignal.connect(scene.createGroupCalled)
         return QtGui.QGraphicsView.setScene(self, scene)
 
     # @Slot(int)

@@ -2,7 +2,7 @@ from PySide import QtGui, QtCore
 from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack, QUndoCommand
 from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
-from gungnode import GungItem, GungPlug, GungNode, GungEdge, getGungNodeClasses
+from gungnode import GungItem, GungPlug, GungNode, GungEdge, GungGroup, getGungNodeClasses
 import gc
 import sys
 import xml.dom.minidom as xmldom
@@ -296,6 +296,17 @@ class GungScene(QGraphicsScene):
     @Slot()
     def undoCalled(self):
         self.undoStack.undo()
+
+    @Slot()
+    def createGroupCalled(self):
+        sel = self.selectedItems()
+        nodes = []
+        for item in sel:
+            if isinstance(item, GungNode):
+                nodes.append(item)
+        if len(nodes):
+            command = GungCreateGroupCommand(self, [node.properties["nodeId"] for node in nodes])
+            self.undoStack.push(command)
         
 
 class GungMoveCommand(QUndoCommand):
@@ -407,6 +418,33 @@ class GungResizeNodeCommand(QUndoCommand):
         node = self.scene.getItemById(self.nodeId)
         node.resizer.setX(self.width)
         node.resizer.setY(self.height)
+
+class GungCreateGroupCommand(QUndoCommand):
+    """
+    Creates the group of a gung nodes.
+    """
+    def __init__(self, scene, nodeIds):
+        QUndoCommand.__init__(self)
+        self.nodeIds = [x for x in nodeIds]  # I hope this creates a local copy of int list
+        self.scene = scene
+
+    def undo(self, *args, **kwargs):
+        # node = self.scene.getItemById(self.nodeId)
+        # node.resizer.setX(self.previousWidth)
+        # node.resizer.setY(self.previousHeight)
+        pass
+
+    def redo(self, *args, **kwargs):
+        if not len(self.nodeIds):
+            return
+        group = GungGroup(None, self.scene)
+
+        for nodeId in self.nodeIds:
+            node = self.scene.getItemById(nodeId)
+            node.setParentItem(group)
+
+        group.updateBoundingRect()
+
 
 class GungDragEdge(QGraphicsItem):
     """

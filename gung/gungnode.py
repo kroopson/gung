@@ -162,6 +162,15 @@ class GungItem(QtGui.QGraphicsItem):
             gn = classes[node.tagName](parent=self, scene=self.scene())
             gn.fromXml(node)
 
+    def getColorConfig(self, section, option):
+        try:
+            nodecolor = config.get(section, option)
+            r,g,b = [int(x) for x in nodecolor.split(",")]
+        except:
+            print "Failed to get the color option", section, option
+            r,g,b = (0,0,0,)
+        return QtGui.QColor(r,g,b,)
+
 
 class GungNode(GungItem):
     elementType = "GungNode"
@@ -206,14 +215,6 @@ class GungNode(GungItem):
         self.createResizer()
         self.updateBBox()
 
-    def getColorConfig(self, section, option):
-        try:
-            nodecolor = config.get(section, option)
-            r,g,b = [int(x) for x in nodecolor.split(",")]
-        except:
-            print "Failed to get the node color", section, option
-            r,g,b = (0,0,0,)
-        return QtGui.QColor(r,g,b,)
 
     def requestMinimumWidth(self, minimumWidth):
 
@@ -334,7 +335,7 @@ class GungNode(GungItem):
             #--- inform the scene that this item has moved.
             self.scene().nodesHaveMoved = True
 
-        return QtGui.QGraphicsItem.itemChange(self, change, value)
+        return GungItem.itemChange(self, change, value)
 
     def getAllEdges(self):
         """
@@ -515,8 +516,19 @@ class GungGroup(GungItem):
         """
         Base class to inherit if you want to create your own groups.
         """
-        QtGui.QGraphicsItem.__init__(self, parent, scene)
+        GungItem.__init__(self, parent, scene)
         self.rect = QtCore.QRectF()
+
+        self.groupColor = self.getColorConfig("Group", "GroupBackground")
+        self.groupBrush = QtGui.QBrush(self.groupColor)
+
+        try:
+            self.offset = config.getFloat("Group", "GroupOffset")
+        except:
+            self.offset = 10
+
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
 
     def updateBoundingRect(self):
         rect = None
@@ -525,18 +537,22 @@ class GungGroup(GungItem):
                 continue
 
             #--- get the bounding box of all items.
+            r = item.boundingRect()
+            r.translate(item.pos())
+            r.adjust(-self.offset, -self.offset, self.offset, self.offset)
             if rect is None:
-                rect = item.boundingRect()
+                rect = QtCore.QRectF(r)
                 continue
-            rect = rect.united(item.boundingRect())
+            rect = rect.united(r)
         if rect is None:
             self.rect = QtCore.QRectF()
         else:
             self.rect = QtCore.QRectF(rect)
         self.update()
 
-    def paint(self, painter, widget):
-        pass
+    def paint(self,  painter, option, widget=None):
+        painter.setBrush(self.groupBrush)
+        painter.drawRect(self.rect)
 
     def boundingRect(self):
         return self.rect
