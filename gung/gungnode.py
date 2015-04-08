@@ -124,6 +124,8 @@ class GungItem(QtGui.QGraphicsItem):
 
         self.properties["nodeId"] = nodeId
 
+        self.parent_ = parent
+
     def asXml(self, document):
         """
         Returns this item and all its sub items as an xml element.
@@ -171,6 +173,26 @@ class GungItem(QtGui.QGraphicsItem):
             r,g,b = (0,0,0,)
         return QtGui.QColor(r,g,b,)
 
+    def itemChange(self, change, value):
+        """
+        Called whenever a change happens to the instance of this class like move, click, resize ect.
+        In this case used to register position changes of the nodes, so that they can be reverted using the
+        undo queue.
+        :param change: defines a type of a change
+        :param value: defines a value of a change
+        :return: QVariant
+        """
+        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+            #--- inform the scene that this item has moved.
+            if isinstance(self.parent_, GungGroup):
+                print "Updating group"
+                self.parent_.updateBoundingRect()
+
+        return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+    def setParentItem(self, parentItem):
+        self.parent_ = parentItem
+        QtGui.QGraphicsItem.setParentItem(self, parentItem)
 
 class GungNode(GungItem):
     elementType = "GungNode"
@@ -214,6 +236,8 @@ class GungNode(GungItem):
 
         self.createResizer()
         self.updateBBox()
+
+        self.parent_ = parent
 
 
     def requestMinimumWidth(self, minimumWidth):
@@ -334,6 +358,9 @@ class GungNode(GungItem):
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             #--- inform the scene that this item has moved.
             self.scene().nodesHaveMoved = True
+
+            # if isinstance(self.parent_, GungGroup):
+            #     self.parent_.updateBoundingRect()
 
         return GungItem.itemChange(self, change, value)
 
