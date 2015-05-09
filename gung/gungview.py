@@ -1,6 +1,5 @@
 from PySide import QtGui, QtCore
-from PySide.QtCore import Slot, QMimeData, Signal
-from PySide.QtGui import QDrag
+from PySide.QtCore import Signal
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
@@ -15,7 +14,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def __init__(self, parent=None):
         QtGui.QGraphicsView.__init__(self, parent)
-        self.previousMousePosition = None
+        self.prev_mouse_pos = None
         self.setSceneRect(-64000, -64000, 128000, 128000)
         self.centerOn(0, 0)
         self.setTransformationAnchor(QtGui.QGraphicsView.NoAnchor)
@@ -39,7 +38,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.MidButton:
-            self.previousMousePosition = event.globalPos()
+            self.prev_mouse_pos = event.globalPos()
         elif event.button() == QtCore.Qt.RightButton:
             self.zoomStart = event.pos()
             self.zoomStartTransform = self.transform()
@@ -48,50 +47,49 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def mouseMoveEvent(self, event):
         if event.buttons() == QtCore.Qt.MidButton:
-            if self.previousMousePosition:
-                currentMousePosition = event.globalPos()
-                x = (currentMousePosition - self.previousMousePosition).x()
-                y = (currentMousePosition - self.previousMousePosition).y()
+            if self.prev_mouse_pos:
+                current_mouse_pos = event.globalPos()
+                x = (current_mouse_pos - self.prev_mouse_pos).x()
+                y = (current_mouse_pos - self.prev_mouse_pos).y()
                 self.translate(x / self.currentScale, y / self.currentScale)
-            self.previousMousePosition = event.globalPos()
+            self.prev_mouse_pos = event.globalPos()
         elif event.buttons() == QtCore.Qt.RightButton:
             if event.pos().x() > self.zoomStart.x():
-                scaleValue = 1 + abs((event.x() - self.zoomStart.x()) / 100.0)
-                self.zoom(scaleValue)
+                scale_value = 1 + abs((event.x() - self.zoomStart.x()) / 100.0)
+                self.zoom(scale_value)
             elif event.pos().x() < self.zoomStart.x():
-                scaleValue = 1.0 / (1 + (abs((event.x() - self.zoomStart.x())) / 100.0))
-                self.zoom(scaleValue)
+                scale_value = 1.0 / (1 + (abs((event.x() - self.zoomStart.x())) / 100.0))
+                self.zoom(scale_value)
         else:
             return QtGui.QGraphicsView.mouseMoveEvent(self, event)
 
-    def zoom(self, scaleValue):
-        if scaleValue <= 0.1:
-            scaleValue = .01
+    def zoom(self, scale_value):
+        if scale_value <= 0.1:
+            scale_value = .01
         
-        currentTransform = self.zoomStartTransform
-        self.setTransform(currentTransform)
-        scenePos = self.mapToScene(self.zoomStart)
+        current_transform = self.zoomStartTransform
+        self.setTransform(current_transform)
+        scene_pos = self.mapToScene(self.zoomStart)
 
-        scaleMatrix = QtGui.QTransform.fromScale(scaleValue, scaleValue)
-        scaledTransform = scaleMatrix * currentTransform
-        self.setTransform(scaledTransform)
+        scale_matrix = QtGui.QTransform.fromScale(scale_value, scale_value)
+        scaled_transform = scale_matrix * current_transform
+        self.setTransform(scaled_transform)
 
-        newMap = self.mapToScene(self.zoomStart)
-        translateVal = [newMap.x() - scenePos.x(), newMap.y() - scenePos.y()]
+        new_map = self.mapToScene(self.zoomStart)
+        translate_val = [new_map.x() - scene_pos.x(), new_map.y() - scene_pos.y()]
 
-        scaledTransform.translate(translateVal[0], translateVal[1])
-        self.setTransform(scaledTransform)
-        self.getCurrentScale()
-        
+        scaled_transform.translate(translate_val[0], translate_val[1])
+        self.setTransform(scaled_transform)
+        self.get_current_scale()
 
-    def getCurrentScale(self):
+    def get_current_scale(self):
         matrix = self.transform()
-        mapPointZero = QtCore.QPointF(0.0, 0.0)
-        mapPointOne = QtCore.QPointF(1.0, 0.0)
+        map_point_zero = QtCore.QPointF(0.0, 0.0)
+        map_point_one = QtCore.QPointF(1.0, 0.0)
 
-        mappedPointZero = matrix.map(mapPointZero)
-        mappedPointOne = matrix.map(mapPointOne)
-        self.currentScale = mappedPointOne.x() - mappedPointZero.x()
+        mapped_point_zero = matrix.map(map_point_zero)
+        mapped_point_one = matrix.map(map_point_one)
+        self.currentScale = mapped_point_one.x() - mapped_point_zero.x()
 
     def wheelEvent(self, event):
         delta = event.delta()
@@ -99,59 +97,59 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
         self.zoomStart = event.pos()
         if delta < 0:
-            scaleValue = .9
+            scale_value = .9
         else:
-            scaleValue = 1.1
+            scale_value = 1.1
 
-        self.zoom(scaleValue)
+        self.zoom(scale_value)
 
     def resizeEvent(self, event):
-        currentSize = self.size()
+        current_size = self.size()
 
         if self.baseSize is None:
             self.setBaseSize()
         if self.baseSize is not 0 and self.baseSize is not None:
-            scaleValue = float(currentSize.width()) / float(self.baseSize.width())
+            scale_value = float(current_size.width()) / float(self.baseSize.width())
             self.baseSize = self.size()
-            self.scale(scaleValue, scaleValue)
+            self.scale(scale_value, scale_value)
 
-        self.getCurrentScale()
+        self.get_current_scale()
         return QtGui.QGraphicsView.resizeEvent(self, event)
 
     def setBaseSize(self):
         self.baseSize = self.size()
 
-    def zoomToSelected(self):
+    def zoom_to_selected(self):
         scenka = self.scene()
-        selItems = scenka.selectedItems()
-        if len(selItems) > 0:
-            zoomRect = QtCore.QRectF()
-            for item in selItems:
+        sel_items = scenka.selectedItems()
+        if len(sel_items) > 0:
+            zoom_rect = QtCore.QRectF()
+            for item in sel_items:
                 if not isinstance(item, GungNode):
                     continue
                 itemrect = item.boundingRect()
-                zoomRect = zoomRect.united(itemrect.translated(item.x(), item.y()))
+                zoom_rect = zoom_rect.united(itemrect.translated(item.x(), item.y()))
 
-            self.fitInView(zoomRect, QtCore.Qt.KeepAspectRatio)
-            self.getCurrentScale()
+            self.fitInView(zoom_rect, QtCore.Qt.KeepAspectRatio)
+            self.get_current_scale()
 
-    def zoomToAll(self):
+    def zoom_to_all(self):
         allnodes = self.getnodes()
         if len(allnodes) > 0:
-            zoomRect = allnodes[0].boundingRect().translated(allnodes[0].x(), allnodes[0].y())
+            zoom_rect = allnodes[0].boundingRect().translated(allnodes[0].x(), allnodes[0].y())
             for item in allnodes[1:]:
                 itemrect = item.boundingRect()
-                zoomRect = zoomRect.united(itemrect.translated(item.x(), item.y()))
-            self.fitInView(zoomRect, QtCore.Qt.KeepAspectRatio)
-            self.getCurrentScale()
+                zoom_rect = zoom_rect.united(itemrect.translated(item.x(), item.y()))
+            self.fitInView(zoom_rect, QtCore.Qt.KeepAspectRatio)
+            self.get_current_scale()
         else:
             self.setTransform(QtGui.QTransform())
 
     def getnodes(self):
         scenka = self.scene()
-        sceneItems = scenka.items()
+        scene_items = scenka.items()
         nodes = []
-        for item in sceneItems:
+        for item in scene_items:
             if not isinstance(item, GungItem):
                 continue
             nodes.append(item)
@@ -159,11 +157,11 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_F:
-            self.zoomToSelected()
+            self.zoom_to_selected()
             event.accept()
 
         if event.key() == QtCore.Qt.Key_A:
-            self.zoomToAll()
+            self.zoom_to_all()
             event.accept()
 
         if event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
@@ -199,11 +197,11 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def setScene(self, scene):
         if isinstance(scene, GungScene):
-            #scene.draggingStarted.connect(self.startDragging)
-            self.undoSignal.connect(scene.undoCalled)
-            self.redoSignal.connect(scene.redoCalled)
-            self.deleteSignal.connect(scene.deleteCalled)
-            self.groupSignal.connect(scene.createGroupCalled)
+            # scene.draggingStarted.connect(self.startDragging)
+            self.undoSignal.connect(scene.undo_called)
+            self.redoSignal.connect(scene.redo_called)
+            self.deleteSignal.connect(scene.delete_called)
+            self.groupSignal.connect(scene.create_group_called)
         return QtGui.QGraphicsView.setScene(self, scene)
 
     # @Slot(int)
@@ -213,4 +211,3 @@ class GungGraphicsView(QtGui.QGraphicsView):
     #     data.setText(str(itemid))
     #     drag.setMimeData(data)
     #     drag.exec_()
-

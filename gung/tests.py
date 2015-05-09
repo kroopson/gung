@@ -3,9 +3,8 @@ from PySide import QtGui
 
 from gung.gungview import GungGraphicsView
 from gung.gungscene import GungScene
-from gung.gungnode import GungNode, GungPlug, GungAttribute, GungEdge
+from gung.gungnode import GungNode, GungPlug, GungAttribute
 from PySide.QtGui import QApplication
-
 
 
 class TestSequenceFunctions(unittest.TestCase):
@@ -33,8 +32,8 @@ class TestSequenceFunctions(unittest.TestCase):
             for _ in range(3):
                 a = GungAttribute(node, scene)
                 GungPlug(a, scene)
-                a.rearrangePlugs()
-            node.rearrangeAttributes()
+                a.rearrange_plugs()
+            node.rearrange_attributes()
         self.assert_(len(scene.items()) != 0, "Failed to create the scene nodes!")
         
         gungnodes = []
@@ -57,23 +56,23 @@ class TestSequenceFunctions(unittest.TestCase):
             for _ in range(5):
                 a = GungAttribute(node, scene)
                 GungPlug(a, scene)
-                a.rearrangePlugs()
-            node.rearrangeAttributes()
+                a.rearrange_plugs()
+            node.rearrange_attributes()
             nodes.append(node)
         
-        scenexml = scene.asXml()
+        scenexml = scene.as_xml()
         
-        sceneB = GungScene(self.view)
+        scene_b = GungScene(self.view)
         
-        sceneB.fromXml(scenexml.toxml())
-        self.assert_(sceneB.asXml().toxml() == scenexml.toxml(), "Scene serialization failed!")
+        scene_b.from_xml(scenexml.toxml())
+        self.assert_(scene_b.as_xml().toxml() == scenexml.toxml(), "Scene serialization failed!")
 
     def testGetNodeById(self):
         scene = GungScene(self.view)
         node = GungNode("test%i", None, scene)
-        self.assert_(scene.getItemById(0) == node, "Failed to get the node by Id")
-        nodeB = GungNode("test%i", None, scene)
-        self.assert_(scene.getItemById(1) == nodeB, "Failed to get the second node by Id")
+        self.assert_(scene.get_item_by_id(0) == node, "Failed to get the node by Id")
+        node_b = GungNode("test%i", None, scene)
+        self.assert_(scene.get_item_by_id(1) == node_b, "Failed to get the second node by Id")
     
     def tearDown(self):
         self.w.close()

@@ -5,17 +5,16 @@ from xml.dom import Node
 import inspect
 import sys
 
-from config import GungConfig
+from config import GungConfig, ConfigParser
 config = GungConfig()
 
 
-
-def getGungNodeClasses():
-    gungClasses = {}
+def get_gung_node_classes():
+    gung_classes = {}
     for name, obj in inspect.getmembers(sys.modules[__name__], inspect.isclass):
-        if "elementType" in obj.__dict__.keys():
-            gungClasses[name] = obj
-    return gungClasses
+        if 'element_type' in obj.__dict__.keys():
+            gung_classes[name] = obj
+    return gung_classes
 
 
 class GungNodeResizer(QtGui.QGraphicsItem):
@@ -49,10 +48,10 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         self.unsetCursor()
         p = self.pos()
         if p != self.storedPos:
-            # --- When this item position is changed call the trigger signal resizeNode.
-            #--- This allows undo/redo of this command.
-            self.scene().resizeNode(self.parentItem().properties['nodeId'], p,
-                                    self.storedPos)
+            # --- When this item position is changed call the trigger signal resize_node.
+            # --- This allows undo/redo of this command.
+            self.scene().resize_node(self.parentItem().properties['node_id'], p,
+                                     self.storedPos)
         return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
     def paint(self, painter, option, widget=None):
@@ -86,23 +85,23 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            parentMinWidth = self.parentItem().properties['minimalWidth']
-            parentMinHeight = self.parentItem().properties['minimalHeight']
+            parent_min_width = self.parentItem().properties['min_width']
+            parent_min_height = self.parentItem().properties['min_height']
 
-            if value.x() < parentMinWidth:
-                value.setX(parentMinWidth)
-                self.setX(parentMinWidth)
+            if value.x() < parent_min_width:
+                value.setX(parent_min_width)
+                self.setX(parent_min_width)
 
-            if value.y() < parentMinHeight:
-                value.setY(parentMinHeight)
-                self.setY(parentMinHeight)
-            self.parentItem().setSize(self.pos())
+            if value.y() < parent_min_height:
+                value.setY(parent_min_height)
+                self.setY(parent_min_height)
+            self.parentItem().set_size(self.pos())
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
 
 class GungItem(QtGui.QGraphicsItem):
-    elementType = "GungNode"
+    element_type = "GungNode"
 
     """
     Base class for all GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
@@ -110,27 +109,27 @@ class GungItem(QtGui.QGraphicsItem):
     save/load). The utility items like resizer are not considered as a GUNG items.
     """
 
-    def __init__(self, parent=None, scene=None, nodeId=None):
+    def __init__(self, parent=None, scene=None, node_id=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
         self.id_ = None
 
         self.properties = dict()
 
-        self.properties['posX'] = 0.0
-        self.properties['posY'] = 0.0
+        self.properties['pos_x'] = 0.0
+        self.properties['pos_y'] = 0.0
 
-        if nodeId is None:
-            nodeId = self.scene().getNewId()
+        if node_id is None:
+            node_id = self.scene().get_new_id()
 
-        self.properties["nodeId"] = nodeId
+        self.properties["node_id"] = node_id
 
         self.parent_ = parent
 
-    def asXml(self, document):
+    def as_xml(self, document):
         """
         Returns this item and all its sub items as an xml element.
         """
-        element = document.createElement(self.elementType)
+        element = document.createElement(self.element_type)
 
         self.properties["posX"] = self.pos().x()
         self.properties["posY"] = self.pos().y()
@@ -141,37 +140,38 @@ class GungItem(QtGui.QGraphicsItem):
         for item in self.childItems():
             if not isinstance(item, GungItem):
                 continue
-            item_element = item.asXml(document)
+            item_element = item.as_xml(document)
             element.appendChild(item_element)
 
         return element
 
-    def fromXml(self, xmlnode):
+    def from_xml(self, xmlnode):
         for k in xmlnode.attributes.keys():
-            if not k in self.properties.keys():
+            if k not in self.properties.keys():
                 continue
             self.properties[k] = type(self.properties[k])(xmlnode.attributes[k].value)
 
-        self.setX(self.properties['posX'])
-        self.setY(self.properties['posY'])
+        self.setX(self.properties['pos_x'])
+        self.setY(self.properties['pos_y'])
 
-        classes = getGungNodeClasses()
+        classes = get_gung_node_classes()
         for node in xmlnode.childNodes:
             if not node.nodeType == Node.ELEMENT_NODE:
                 continue
-            if not node.tagName in classes.keys():
+            if node.tagName not in classes.keys():
                 continue
             gn = classes[node.tagName](parent=self, scene=self.scene())
-            gn.fromXml(node)
+            gn.from_xml(node)
 
-    def getColorConfig(self, section, option):
+    @staticmethod
+    def get_color_config(section, option):
         try:
             nodecolor = config.get(section, option)
-            r,g,b = [int(x) for x in nodecolor.split(",")]
-        except:
+            r, g, b = [int(x) for x in nodecolor.split(",")]
+        except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
             print "Failed to get the color option", section, option
-            r,g,b = (0,0,0,)
-        return QtGui.QColor(r,g,b,)
+            r, g, b = (0, 0, 0,)
+        return QtGui.QColor(r, g, b,)
 
     def itemChange(self, change, value):
         """
@@ -183,19 +183,20 @@ class GungItem(QtGui.QGraphicsItem):
         :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            #--- inform the scene that this item has moved.
+            # --- inform the scene that this item has moved.
             if isinstance(self.parent_, GungGroup):
                 print "Updating group"
-                self.parent_.updateBoundingRect()
+                self.parent_.update_bounding_rect()
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
-    def setParentItem(self, parentItem):
-        self.parent_ = parentItem
-        QtGui.QGraphicsItem.setParentItem(self, parentItem)
+    def setParentItem(self, parent_item):
+        self.parent_ = parent_item
+        QtGui.QGraphicsItem.setParentItem(self, parent_item)
+
 
 class GungNode(GungItem):
-    elementType = "GungNode"
+    element_type = "GungNode"
     resizerClass = GungNodeResizer
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
@@ -207,22 +208,21 @@ class GungNode(GungItem):
         self.resizer = None
 
         self.properties['name'] = name
-        self.properties['nodeWidth'] = config.getfloat("Node", "MinimalWidth")
-        self.properties['nodeHeight'] = config.getfloat("Node", "MinimalHeight")
-        self.properties['minimalWidth'] = config.getfloat("Node", "MinimalWidth")
-        self.properties['minimalHeight'] = config.getfloat("Node", "MinimalHeight")
+        self.properties['node_width'] = config.getfloat("Node", "MinimalWidth")
+        self.properties['node_height'] = config.getfloat("Node", "MinimalHeight")
+        self.properties['min_width'] = config.getfloat("Node", "MinimalWidth")
+        self.properties['min_height'] = config.getfloat("Node", "MinimalHeight")
 
         self.bboxW = config.getfloat("Node", "MinimalWidth")
         self.bboxH = config.getfloat("Node", "MinimalHeight")
 
-        self.nodeColor = self.getColorConfig("Node", "NodeColor")
+        self.nodeColor = self.get_color_config("Node", "NodeColor")
         self.lightGrayBrush = QtGui.QBrush(self.nodeColor)
         self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
 
-
-        self.selectedPen = QtGui.QPen(self.getColorConfig("Node", "SelectedEdgeColor"))
-        self.unselectedPen = QtGui.QPen(self.getColorConfig("Node", "UnSelectedEdgeColor"))
-        self.textPen = QtGui.QPen(self.getColorConfig("Node", "TextColor"))
+        self.selectedPen = QtGui.QPen(self.get_color_config("Node", "SelectedEdgeColor"))
+        self.unselectedPen = QtGui.QPen(self.get_color_config("Node", "UnSelectedEdgeColor"))
+        self.textPen = QtGui.QPen(self.get_color_config("Node", "TextColor"))
 
         self.plugFont = QtGui.QFont("Arial", 7)
 
@@ -234,40 +234,38 @@ class GungNode(GungItem):
 
         self.draggingNode = None
 
-        self.createResizer()
-        self.updateBBox()
+        self.create_resizer()
+        self.update_bbox()
 
         self.parent_ = parent
 
+    def request_minimum_width(self, minimum_width):
+        if minimum_width < config.getfloat("Node", "MinimalWidth"):
+            minimum_width = config.getfloat("Node", "MinimalWidth")
 
-    def requestMinimumWidth(self, minimumWidth):
+        if self.properties['min_width'] < minimum_width:
+            self.properties['min_width'] = minimum_width
 
-        if minimumWidth < config.getfloat("Node", "MinimalWidth"):
-            minimumWidth = config.getfloat("Node", "MinimalWidth")
+        if self.properties['node_width'] < minimum_width:
+            self.properties['node_width'] = minimum_width
 
-        if self.properties['minimalWidth'] < minimumWidth:
-            self.properties['minimalWidth'] = minimumWidth
+        if self.resizer.pos().x() < minimum_width:
+            self.resizer.setX(minimum_width)
 
-        if self.properties['nodeWidth'] < minimumWidth:
-            self.properties['nodeWidth'] = minimumWidth
-
-        if self.resizer.pos().x() < minimumWidth:
-            self.resizer.setX(minimumWidth)
-
-    def createResizer(self):
+    def create_resizer(self):
         """
         Adds a special type of child item that will control the size of this node.
         This is a typical behaviour of a node systems, that allows you to resize the nodes with a small widget.
         """
         self.resizer = self.resizerClass(self, self.scene())
-        self.resizer.setX(self.properties['nodeWidth'])
-        self.resizer.setY(self.properties['nodeHeight'])
+        self.resizer.setX(self.properties['node_width'])
+        self.resizer.setY(self.properties['node_height'])
 
-    def updateBBox(self):
-        self.bboxW = self.properties['nodeWidth']
-        self.bboxH = self.properties['nodeHeight']
+    def update_bbox(self):
+        self.bboxW = self.properties['node_width']
+        self.bboxH = self.properties['node_height']
 
-    def rearrangeAttributes(self):
+    def rearrange_attributes(self):
         currentheight = -1
         for childitem in self.childItems():
             if not isinstance(childitem, GungAttribute):
@@ -279,21 +277,21 @@ class GungNode(GungItem):
 
             childitem.setX(0)
             childitem.setY(currentheight)
-            currentheight += childitem.properties['attrHeight'] + 2
+            currentheight += childitem.properties['attr_height'] + 2
 
         if currentheight >= 35:
-            self.properties['minimalHeight'] = currentheight + 20.0
+            self.properties['min_height'] = currentheight + 20.0
         else:
-            self.properties['minimalHeight'] = 35 + 20.0
+            self.properties['min_height'] = 35 + 20.0
 
-        if self.properties['nodeHeight'] < self.properties['minimalHeight']:
-            self.properties['nodeHeight'] = self.properties['minimalHeight']
-            self.resizer.setY(self.properties['minimalHeight'])
+        if self.properties['node_height'] < self.properties['min_height']:
+            self.properties['node_height'] = self.properties['min_height']
+            self.resizer.setY(self.properties['min_height'])
 
         for childitem in self.childItems():
             if not isinstance(childitem, GungAttribute):
                 continue
-            childitem.rearrangePlugs()
+            childitem.rearrange_plugs()
 
     def mousePressEvent(self, event):
         self.scene().topZ += .0001
@@ -303,25 +301,25 @@ class GungNode(GungItem):
     def mouseDoubleClickEvent(self, event):
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
-    def fromXml(self, xmlnode):
-        GungItem.fromXml(self, xmlnode)
-        self.resizer.setX(self.properties['nodeWidth'])
-        self.resizer.setY(self.properties['nodeHeight'])
+    def from_xml(self, xmlnode):
+        GungItem.from_xml(self, xmlnode)
+        self.resizer.setX(self.properties['node_width'])
+        self.resizer.setY(self.properties['node_height'])
 
-    def setSize(self, size):
+    def set_size(self, size):
         """
         Sets an attributes in properties dict, updates bounding box and calls the rearrangement
         of all attributes. This is needed if you want to have plugs "sticked" to the right edge
         of this node.
         """
-        self.properties['nodeWidth'] = size.x()
-        self.properties['nodeHeight'] = size.y()
+        self.properties['node_width'] = size.x()
+        self.properties['node_height'] = size.y()
         self.update()
 
         self.prepareGeometryChange()
-        self.updateBBox()
+        self.update_bbox()
 
-        self.rearrangeAttributes()
+        self.rearrange_attributes()
 
     def paint(self, painter, option, widget=None):
         """
@@ -330,16 +328,16 @@ class GungNode(GungItem):
         """
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
-        #--- Distinguish the selected nodes from the unselected ones.
+        # --- Distinguish the selected nodes from the unselected ones.
         if self.isSelected():
             painter.setPen(self.selectedPen)
         else:
             painter.setPen(self.unselectedPen)
 
         painter.setBrush(self.nodeColor)
-        painter.drawRect(0, 0, self.properties['nodeWidth'], self.properties['nodeHeight'])
+        painter.drawRect(0, 0, self.properties['node_width'], self.properties['node_height'])
 
-        #--- Draw name of the node
+        # --- Draw name of the node
         painter.setPen(self.textPen)
         painter.drawText(5, 15, self.properties['name'])
 
@@ -353,18 +351,18 @@ class GungNode(GungItem):
         undo queue.
         :param change: defines a type of a change
         :param value: defines a value of a change
-        :return: QVariant
+        :rtype: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
-            #--- inform the scene that this item has moved.
+            # --- inform the scene that this item has moved.
             self.scene().nodesHaveMoved = True
 
             # if isinstance(self.parent_, GungGroup):
-            #     self.parent_.updateBoundingRect()
+            #     self.parent_.update_bounding_rect()
 
         return GungItem.itemChange(self, change, value)
 
-    def getAllEdges(self):
+    def get_all_edges(self):
         """
         Returns all edges connected to plugs for this node.
         """
@@ -378,7 +376,7 @@ class GungNode(GungItem):
                 result += subitem.edges
         return result
 
-    def getAllPlugs(self):
+    def get_all_plugs(self):
         """
         Returns all plugs for this node.
         """
@@ -394,19 +392,19 @@ class GungNode(GungItem):
 
 
 class GungAttribute(GungItem):
-    elementType = "GungAttribute"
+    element_type = "GungAttribute"
 
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent, scene)
 
-        self.properties['attrHeight'] = config.getfloat("Attribute", "Height")
+        self.properties['attr_height'] = config.getfloat("Attribute", "Height")
 
     def paint(self, painter, option, widget=None):
         painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
         painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
         painter.drawRect(self.boundingRect())
 
-    def rearrangePlugs(self):
+    def rearrange_plugs(self):
         plugs = []
         for childitem in self.childItems():
             if not isinstance(childitem, GungPlug):
@@ -427,71 +425,71 @@ class GungAttribute(GungItem):
                 inplugs.append(p)
 
         index = 0
-        totalWidth = 0
+        total_width = 0
         for p in inplugs:
-            w = index * p.properties['plugWidth']
+            w = index * p.properties['plug_width']
             p.setX(w)
             p.setY(0)
-            totalWidth += p.properties['plugWidth']
+            total_width += p.properties['plug_width']
             index += 1
 
-        parentBounding = self.parentItem().boundingRect()
+        parent_bounding = self.parentItem().boundingRect()
         index = 1
         for p in outplugs:
-            w = (index * p.properties['plugWidth']) + 1
-            p.setX(parentBounding.width() - w)
+            w = (index * p.properties['plug_width']) + 1
+            p.setX(parent_bounding.width() - w)
             p.setY(0)
-            totalWidth += p.properties['plugWidth']
+            total_width += p.properties['plug_width']
             index += 1
 
         if isinstance(self.parentItem(), GungNode):
-            self.parentItem().requestMinimumWidth(totalWidth)
+            self.parentItem().request_minimum_width(total_width)
 
     def boundingRect(self):
         """
         Override this in child classes.
         """
 
-        return QtCore.QRectF(0, 0, self.parentItem().properties['nodeWidth'], self.properties['attrHeight'])
+        return QtCore.QRectF(0, 0, self.parentItem().properties['node_width'], self.properties['attr_height'])
 
 
 class GungPlug(GungItem):
-    elementType = "GungPlug"
+    element_type = "GungPlug"
     acceptsConnections = "GungOutPlug"
 
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
-        self.properties['plugWidth'] = 14.0
-        self.properties['plugHeight'] = 14.0
+        self.properties['plug_width'] = 14.0
+        self.properties['plug_height'] = 14.0
 
         self.isHighlighted = False
 
-        plugColor = QtGui.QColor(150, 255, 150)
+        plug_color = QtGui.QColor(150, 255, 150)
 
-        self.plugPen = QtGui.QPen(plugColor.lighter())
-        self.plugBrush = QtGui.QBrush(plugColor)
-        self.highlightedPlugBrush = QtGui.QBrush(plugColor.lighter())
+        self.plugPen = QtGui.QPen(plug_color.lighter())
+        self.plugBrush = QtGui.QBrush(plug_color)
+        self.highlightedPlugBrush = QtGui.QBrush(plug_color.lighter())
 
         self.edges = []
 
         self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
 
-    def acceptsDrop(self, plugOut):
+    def accepts_drop(self, plug_out):
         result = False
-        if plugOut.elementType in self.acceptsConnections.split(","):
+        if plug_out.element_type in self.acceptsConnections.split(","):
             result = True
         return result
 
     def mousePressEvent(self, event):
         event.accept()
-        self.scene().initDraggingEdge(self.mapToScene(self.boundingRect().center()), self)
+        self.scene().init_dragging_edge(self.mapToScene(self.boundingRect().center()), self)
 
     def mouseMoveEvent(self, event):
         return GungItem.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
-        self.scene().draggingEnded(self.mapToScene(event.pos()))
+        self.scene().dragging_ended(self.mapToScene(event.pos()))
         return GungItem.mouseReleaseEvent(self, event)
 
     def paint(self, painter, option, widget=None):
@@ -504,14 +502,14 @@ class GungPlug(GungItem):
             painter.setBrush(self.highlightedPlugBrush)
         else:
             painter.setBrush(self.plugBrush)
-        painter.drawRect(0, 0, self.properties['plugWidth'], self.properties['plugHeight'])
+        painter.drawRect(0, 0, self.properties['plug_width'], self.properties['plug_height'])
 
-    def setHighlighted(self, state):
+    def set_highlited(self, state):
         self.isHighlighted = state
         self.update()
 
     def boundingRect(self, *args, **kwargs):
-        return QtCore.QRectF(0, 0, self.properties['plugWidth'], self.properties['plugHeight'])
+        return QtCore.QRectF(0, 0, self.properties['plug_width'], self.properties['plug_height'])
 
     def itemChange(self, change, value):
         """
@@ -529,41 +527,44 @@ class GungPlug(GungItem):
                     continue
                 if edge.itemTo is self:
                     edge.prepareGeometryChange()
-                    edge.setToPos(self.mapToScene(self.boundingRect().center()))
+                    edge.set_to_pos(self.mapToScene(self.boundingRect().center()))
                 if edge.itemFrom is self:
                     edge.prepareGeometryChange()
-                    edge.setFromPos(self.mapToScene(self.boundingRect().center()))
+                    edge.set_from_pos(self.mapToScene(self.boundingRect().center()))
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
 
 class GungGroup(GungItem):
-    elementType = "GungGroup"
-    def __init__(self, parent=None, scene=None, nodeId=None):
+    element_type = "GungGroup"
+
+    def __init__(self, parent=None, scene=None, node_id=None):
         """
         Base class to inherit if you want to create your own groups.
         """
         GungItem.__init__(self, parent, scene)
         self.rect = QtCore.QRectF()
 
-        self.groupColor = self.getColorConfig("Group", "GroupBackground")
-        self.groupBrush = QtGui.QBrush(self.groupColor)
+        self.group_color = self.get_color_config("Group", "GroupBackground")
+        self.group_brush = QtGui.QBrush(self.group_color)
 
         try:
-            self.offset = config.getFloat("Group", "GroupOffset")
-        except:
+            self.offset = config.getfloat("Group", "GroupOffset")
+        except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
             self.offset = 10
 
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
 
-    def updateBoundingRect(self):
+        self._node_id = node_id
+
+    def update_bounding_rect(self):
         rect = None
-        for item in self.childItems(): # iterate only groups and nodes
+        for item in self.childItems():  # iterate only groups and nodes
             if not isinstance(item, GungNode) and not isinstance(item, GungGroup):
                 continue
 
-            #--- get the bounding box of all items.
+            # --- get the bounding box of all items.
             r = item.boundingRect()
             r.translate(item.pos())
             r.adjust(-self.offset, -self.offset, self.offset, self.offset)
@@ -578,7 +579,7 @@ class GungGroup(GungItem):
         self.update()
 
     def paint(self,  painter, option, widget=None):
-        painter.setBrush(self.groupBrush)
+        painter.setBrush(self.group_brush)
         painter.drawRect(self.rect)
 
     def boundingRect(self):
@@ -586,7 +587,7 @@ class GungGroup(GungItem):
 
 
 class GungOutPlug(GungPlug):
-    elementType = "GungOutPlug"
+    element_type = "GungOutPlug"
     acceptsConnections = "GungPlug"
 
     def __init__(self, parent=None, scene=None):
@@ -594,17 +595,17 @@ class GungOutPlug(GungPlug):
 
 
 class GungEdge(GungItem):
-    def __init__(self, itemFromId, itemToId, parent=None, scene=None):
+    def __init__(self, item_from_id, item_to_id, parent=None, scene=None):
         GungItem.__init__(self, None, scene)
 
-        self.properties['itemFromId'] = itemFromId
-        self.properties['itemToId'] = itemToId
+        self.properties['item_from_id'] = item_from_id
+        self.properties['item_to_id'] = item_to_id
 
         self.itemFrom = None
         self.itemTo = None
 
-        itemfrom = self.scene().getItemById(int(itemFromId))
-        itemto = self.scene().getItemById(int(itemToId))
+        itemfrom = self.scene().get_item_by_id(int(item_from_id))
+        itemto = self.scene().get_item_by_id(int(item_to_id))
 
         self.fromPos = itemfrom.mapToScene(itemfrom.boundingRect().center())
         self.toPos = itemto.mapToScene(itemto.boundingRect().center())
@@ -615,20 +616,23 @@ class GungEdge(GungItem):
 
         self.brect = QtCore.QRectF()
 
-    def reconnectEdge(self):
-        if not self.properties['itemFromId'] == -1 and not self.properties['itemFromId'] == self.properties['nodeId']:
-            self.itemFrom = self.scene().getItemById(int(self.properties['itemFromId']))
-            if not self.itemFrom is None:
+        self._parent = parent
+
+    def reconnect_edge(self):
+        if not self.properties['item_from_id'] == -1 \
+                and not self.properties['item_from_id'] == self.properties['node_id']:
+            self.itemFrom = self.scene().get_item_by_id(int(self.properties['item_from_id']))
+            if self.itemFrom is not None:
                 self.itemFrom.edges.append(self)
-                self.setFromPos(self.itemFrom.mapToScene(self.itemFrom.boundingRect().center()))
-        if not self.properties['itemToId'] == -1 and not self.properties['itemToId'] == self.properties['nodeId']:
-            self.itemTo = self.scene().getItemById(int(self.properties['itemToId']))
-            if not self.itemTo is None:
+                self.set_from_pos(self.itemFrom.mapToScene(self.itemFrom.boundingRect().center()))
+        if not self.properties['item_to_id'] == -1 and not self.properties['item_to_id'] == self.properties['node_id']:
+            self.itemTo = self.scene().get_item_by_id(int(self.properties['item_to_id']))
+            if self.itemTo is not None:
                 self.itemTo.edges.append(self)
-                self.setToPos(self.itemTo.mapToScene(self.itemTo.boundingRect().center()))
+                self.set_to_pos(self.itemTo.mapToScene(self.itemTo.boundingRect().center()))
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
 
-    def disconnectEdge(self):
+    def disconnect_edge(self):
         # TODO: Make it more loose coupled. Now it's a field for errors.
         while self in self.itemFrom.edges:
             self.itemFrom.edges.remove(self)
@@ -640,31 +644,30 @@ class GungEdge(GungItem):
         if self.itemFrom is None or self.itemTo is None:
             return
         painter.setPen(self.edgePen)
-        posStart = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
-        posEnd = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        post_start = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
+        pos_end = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
 
-        painter.drawLine(posStart, posEnd)
+        painter.drawLine(post_start, pos_end)
 
-    def setFromPos(self, pointFrom):
-        self.fromPos = QtCore.QPointF(pointFrom)
+    def set_from_pos(self, point_from):
+        self.fromPos = QtCore.QPointF(point_from)
 
-        topleftX = min(float(self.fromPos.x()), float(self.toPos.x()))
-        topleftY = min(float(self.fromPos.y()), float(self.toPos.y()))
+        top_left_x = min(float(self.fromPos.x()), float(self.toPos.x()))
+        top_left_y = min(float(self.fromPos.y()), float(self.toPos.y()))
 
-        bottomrightX = max(float(self.fromPos.x()), float(self.toPos.x()))
-        bottomrightY = max(float(self.fromPos.y()), float(self.toPos.y()))
-        self.brect = QtCore.QRectF(topleftX, topleftY, bottomrightX - topleftX, bottomrightY - topleftY)
+        bottom_right_x = max(float(self.fromPos.x()), float(self.toPos.x()))
+        bottom_right_y = max(float(self.fromPos.y()), float(self.toPos.y()))
+        self.brect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
 
-    def setToPos(self, pointTo):
-        self.toPos = QtCore.QPointF(pointTo)
+    def set_to_pos(self, point_to):
+        self.toPos = QtCore.QPointF(point_to)
 
-        topleftX = min(float(self.fromPos.x()), float(self.toPos.x()))
-        topleftY = min(float(self.fromPos.y()), float(self.toPos.y()))
+        top_left_x = min(float(self.fromPos.x()), float(self.toPos.x()))
+        top_left_y = min(float(self.fromPos.y()), float(self.toPos.y()))
 
-        bottomrightX = max(float(self.fromPos.x()), float(self.toPos.x()))
-        bottomrightY = max(float(self.fromPos.y()), float(self.toPos.y()))
-        self.brect = QtCore.QRectF(topleftX, topleftY, bottomrightX - topleftX, bottomrightY - topleftY)
+        bottom_right_x = max(float(self.fromPos.x()), float(self.toPos.x()))
+        bottom_right_y = max(float(self.fromPos.y()), float(self.toPos.y()))
+        self.brect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
 
     def boundingRect(self, *args, **kwargs):
         return self.brect
-
