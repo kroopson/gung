@@ -111,6 +111,8 @@ class GungItem(QtGui.QGraphicsItem):
 
     def __init__(self, parent=None, scene=None, node_id=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
+        self.self_target = self  # This keeps the reference to the object so it won't get collected by garbage collector
+
         self.id_ = None
 
         self.properties = dict()
@@ -122,7 +124,6 @@ class GungItem(QtGui.QGraphicsItem):
             node_id = self.scene().get_new_id()
 
         self.properties["node_id"] = node_id
-
         self.parent_ = parent
 
     def as_xml(self, document):
@@ -132,7 +133,6 @@ class GungItem(QtGui.QGraphicsItem):
         element = document.createElement(self.element_type)
 
         self.properties["posX"] = self.pos().x()
-        self.properties["posY"] = self.pos().y()
 
         for p in self.properties.keys():
             element.setAttribute(p, str(self.properties[p]))
@@ -556,12 +556,14 @@ class GungGroup(GungItem):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
 
+        # TODO: Double check if this is even needed.
         self._node_id = node_id
 
     def update_bounding_rect(self):
         rect = None
         for item in self.childItems():  # iterate only groups and nodes
-            if not isinstance(item, GungNode) and not isinstance(item, GungGroup):
+            print isinstance(item, GungNode)
+            if not item.__class__.__name__ == "GungNode" and not item.__class__.__name__ == "GungGroup":
                 continue
 
             # --- get the bounding box of all items.

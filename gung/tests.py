@@ -21,7 +21,7 @@ class TestSequenceFunctions(unittest.TestCase):
         wlyt.addWidget(self.view)
         self.w.show()
     
-    def testCreateScene(self):
+    def test_create_scene(self):
         """
         Checks if scene creation works fine.
         """
@@ -43,7 +43,7 @@ class TestSequenceFunctions(unittest.TestCase):
                 
         self.assert_(len(gungnodes) == 10, "Wrong number of created nodes!")
         
-    def testSaveLoadXML(self):
+    def test_save_load_xml(self):
         """
         Checks if scene serialization works fine.
         """
@@ -67,7 +67,7 @@ class TestSequenceFunctions(unittest.TestCase):
         scene_b.from_xml(scenexml.toxml())
         self.assert_(scene_b.as_xml().toxml() == scenexml.toxml(), "Scene serialization failed!")
 
-    def testGetNodeById(self):
+    def test_get_node_by_id(self):
         scene = GungScene(self.view)
         node = GungNode("test%i", None, scene)
         self.assert_(scene.get_item_by_id(0) == node, "Failed to get the node by Id")
