@@ -4,7 +4,7 @@ from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
 from gungcommand import GungCreateGroupCommand, GungCreateEdgeCommand, GungDeleteItemsCommand, GungMoveCommand
 from gungcommand import GungResizeNodeCommand
-from gungnode import GungItem, GungPlug, GungNode, GungEdge, get_gung_node_classes
+from gungnode import GungItem, GungPlug, GungNode, GungEdge, GungGroup, get_gung_node_classes
 import xml.dom.minidom as xmldom
 from xml.dom import Node
 
@@ -166,12 +166,11 @@ class GungScene(QGraphicsScene):
         
         nodes_that_have_moved = []
         for item in self.items():
-            if not isinstance(item, GungNode):
+            if not isinstance(item, (GungNode, GungGroup)):
                 continue
             p = item.pos()
             if p.x() != item.properties['pos_x'] or p.y() != item.properties['pos_y']:
                 nodes_that_have_moved.append(item)
-
         # --- if no nodes have moved return
         if not len(nodes_that_have_moved):
             return

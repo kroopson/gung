@@ -3,7 +3,7 @@ from PySide.QtCore import Signal
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
-versionString = "GUNG v.0.0.5"
+versionString = "GUNG v.0.0.6"
 
 
 class GungGraphicsView(QtGui.QGraphicsView):

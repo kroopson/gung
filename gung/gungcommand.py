@@ -11,6 +11,7 @@ class GungMoveCommand(QUndoCommand):
         {
         10 : [0,0,250,100]
         }
+        This means that node with id of 10 has been moved from position 0, 0 to position 250, 100
         """
         QUndoCommand.__init__(self)
         self.nodes = {}
@@ -129,7 +130,6 @@ class GungCreateGroupCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         nodes = []
-        print len(self.scene.items())
         for nid in self.nodeIds:
             node = self.scene.get_item_by_id(nid)
             nodes.append(node)

@@ -400,9 +400,10 @@ class GungAttribute(GungItem):
         self.properties['attr_height'] = config.getfloat("Attribute", "Height")
 
     def paint(self, painter, option, widget=None):
-        painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
-        painter.drawRect(self.boundingRect())
+        pass
+        # painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
+        # painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
+        # painter.drawRect(self.boundingRect())
 
     def rearrange_plugs(self):
         plugs = []
@@ -502,7 +503,8 @@ class GungPlug(GungItem):
             painter.setBrush(self.highlightedPlugBrush)
         else:
             painter.setBrush(self.plugBrush)
-        painter.drawRect(0, 0, self.properties['plug_width'], self.properties['plug_height'])
+        # painter.drawRect(0, 0, self.properties['plug_width'], self.properties['plug_height'])
+        painter.drawEllipse(1, 1, self.properties['plug_width'] - 1, self.properties['plug_height'] - 1)
 
     def set_highlited(self, state):
         self.isHighlighted = state
@@ -553,8 +555,10 @@ class GungGroup(GungItem):
         except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
             self.offset = 10
 
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges, True)
 
         # TODO: Double check if this is even needed.
         self._node_id = node_id
@@ -586,6 +590,24 @@ class GungGroup(GungItem):
 
     def boundingRect(self):
         return self.rect
+
+    def itemChange(self, change, value):
+        """
+        Called whenever a change happens to the instance of this class like move, click, resize ect.
+        In this case used to register position changes of the nodes, so that they can be reverted using the
+        undo queue.
+        :param change: defines a type of a change
+        :param value: defines a value of a change
+        :rtype: QVariant
+        """
+        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+            # --- inform the scene that this item has moved.
+            self.scene().nodesHaveMoved = True
+
+            # if isinstance(self.parent_, GungGroup):
+            #     self.parent_.update_bounding_rect()
+
+        return GungItem.itemChange(self, change, value)
 
 
 class GungOutPlug(GungPlug):

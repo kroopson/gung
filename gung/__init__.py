@@ -163,7 +163,7 @@ if __name__ == "__main__":
     # but.clicked.connect(scene.print_graph)
     # wlyt.addWidget(but)
     
-    scene.from_xml(testgung_xml_b)
+    scene.from_xml(testgung_xml)
 #     for i in range(10):
 #         node = GungNode("test%i" % i, None, scene)
 #         node.setX(i * 105)
