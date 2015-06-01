@@ -19,20 +19,20 @@ class GungMoveCommand(QUndoCommand):
 
     def undo(self, *args, **kwargs):
         for n in self.nodes.keys():
-            gnode = self.scene.get_item_by_id(n)
-            gnode.setX(self.nodes[n][0])
-            gnode.setY(self.nodes[n][1])
-            gnode.properties['pos_x'] = self.nodes[n][0]
-            gnode.properties['pos_y'] = self.nodes[n][1]
+            gung_node = self.scene.get_item_by_id(n)
+            gung_node.setX(self.nodes[n][0])
+            gung_node.setY(self.nodes[n][1])
+            gung_node.properties['pos_x'] = self.nodes[n][0]
+            gung_node.properties['pos_y'] = self.nodes[n][1]
         self.scene.nodesHaveMoved = False
 
     def redo(self, *args, **kwargs):
         for n in self.nodes.keys():
-            gnode = self.scene.get_item_by_id(n)
-            gnode.setX(self.nodes[n][2])
-            gnode.setY(self.nodes[n][3])
-            gnode.properties['pos_x'] = self.nodes[n][2]
-            gnode.properties['pos_y'] = self.nodes[n][3]
+            gung_node = self.scene.get_item_by_id(n)
+            gung_node.setX(self.nodes[n][2])
+            gung_node.setY(self.nodes[n][3])
+            gung_node.properties['pos_x'] = self.nodes[n][2]
+            gung_node.properties['pos_y'] = self.nodes[n][3]
         self.scene.nodesHaveMoved = False
 
 

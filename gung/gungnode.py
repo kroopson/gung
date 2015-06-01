@@ -166,8 +166,8 @@ class GungItem(QtGui.QGraphicsItem):
     @staticmethod
     def get_color_config(section, option):
         try:
-            nodecolor = config.get(section, option)
-            r, g, b = [int(x) for x in nodecolor.split(",")]
+            node_color = config.get(section, option)
+            r, g, b = [int(x) for x in node_color.split(",")]
         except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
             print "Failed to get the color option", section, option
             r, g, b = (0, 0, 0,)
@@ -185,7 +185,6 @@ class GungItem(QtGui.QGraphicsItem):
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
             if isinstance(self.parent_, GungGroup):
-                print "Updating group"
                 self.parent_.update_bounding_rect()
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
@@ -266,21 +265,21 @@ class GungNode(GungItem):
         self.bboxH = self.properties['node_height']
 
     def rearrange_attributes(self):
-        currentheight = -1
-        for childitem in self.childItems():
-            if not isinstance(childitem, GungAttribute):
+        current_height = -1
+        for child_item in self.childItems():
+            if not isinstance(child_item, GungAttribute):
                 continue
 
-            childitem.setX(0)
-            if currentheight == -1:
-                currentheight = 20
+            child_item.setX(0)
+            if current_height == -1:
+                current_height = 20
 
-            childitem.setX(0)
-            childitem.setY(currentheight)
-            currentheight += childitem.properties['attr_height'] + 2
+            child_item.setX(0)
+            child_item.setY(current_height)
+            current_height += child_item.properties['attr_height'] + 2
 
-        if currentheight >= 35:
-            self.properties['min_height'] = currentheight + 20.0
+        if current_height >= 35:
+            self.properties['min_height'] = current_height + 20.0
         else:
             self.properties['min_height'] = 35 + 20.0
 
@@ -288,10 +287,10 @@ class GungNode(GungItem):
             self.properties['node_height'] = self.properties['min_height']
             self.resizer.setY(self.properties['min_height'])
 
-        for childitem in self.childItems():
-            if not isinstance(childitem, GungAttribute):
+        for child_item in self.childItems():
+            if not isinstance(child_item, GungAttribute):
                 continue
-            childitem.rearrange_plugs()
+            child_item.rearrange_plugs()
 
     def mousePressEvent(self, event):
         self.scene().topZ += .0001
@@ -527,10 +526,10 @@ class GungPlug(GungItem):
             for edge in self.edges:
                 if edge is None:
                     continue
-                if edge.itemTo is self:
+                if edge.item_to is self:
                     edge.prepareGeometryChange()
                     edge.set_to_pos(self.mapToScene(self.boundingRect().center()))
-                if edge.itemFrom is self:
+                if edge.item_from is self:
                     edge.prepareGeometryChange()
                     edge.set_from_pos(self.mapToScene(self.boundingRect().center()))
 
@@ -566,7 +565,6 @@ class GungGroup(GungItem):
     def update_bounding_rect(self):
         rect = None
         for item in self.childItems():  # iterate only groups and nodes
-            print isinstance(item, GungNode)
             if not item.__class__.__name__ == "GungNode" and not item.__class__.__name__ == "GungGroup":
                 continue
 
@@ -590,6 +588,11 @@ class GungGroup(GungItem):
 
     def boundingRect(self):
         return self.rect
+
+    def mousePressEvent(self, event):
+        self.scene().topZ += .0001
+        self.setZValue(self.scene().topZ)
+        return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def itemChange(self, change, value):
         """
@@ -625,73 +628,78 @@ class GungEdge(GungItem):
         self.properties['item_from_id'] = item_from_id
         self.properties['item_to_id'] = item_to_id
 
-        self.itemFrom = None
-        self.itemTo = None
+        self.item_from = None
+        self.item_to = None
 
-        itemfrom = self.scene().get_item_by_id(int(item_from_id))
-        itemto = self.scene().get_item_by_id(int(item_to_id))
+        item_from = self.scene().get_item_by_id(int(item_from_id))
+        item_to = self.scene().get_item_by_id(int(item_to_id))
 
-        self.fromPos = itemfrom.mapToScene(itemfrom.boundingRect().center())
-        self.toPos = itemto.mapToScene(itemto.boundingRect().center())
+        self.from_pos = item_from.mapToScene(item_from.boundingRect().center())
+        self.to_pos = item_to.mapToScene(item_to.boundingRect().center())
 
-        self.edgePen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.edge_pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.setZValue(self.scene().topEdgeZ)
         self.scene().topEdgeZ += .0001
 
-        self.brect = QtCore.QRectF()
+        self.bounding_rect = QtCore.QRectF()
 
         self._parent = parent
 
     def reconnect_edge(self):
         if not self.properties['item_from_id'] == -1 \
                 and not self.properties['item_from_id'] == self.properties['node_id']:
-            self.itemFrom = self.scene().get_item_by_id(int(self.properties['item_from_id']))
-            if self.itemFrom is not None:
-                self.itemFrom.edges.append(self)
-                self.set_from_pos(self.itemFrom.mapToScene(self.itemFrom.boundingRect().center()))
+            self.item_from = self.scene().get_item_by_id(int(self.properties['item_from_id']))
+            if self.item_from is not None:
+                self.item_from.edges.append(self)
+                self.set_from_pos(self.item_from.mapToScene(self.item_from.boundingRect().center()))
         if not self.properties['item_to_id'] == -1 and not self.properties['item_to_id'] == self.properties['node_id']:
-            self.itemTo = self.scene().get_item_by_id(int(self.properties['item_to_id']))
-            if self.itemTo is not None:
-                self.itemTo.edges.append(self)
-                self.set_to_pos(self.itemTo.mapToScene(self.itemTo.boundingRect().center()))
+            self.item_to = self.scene().get_item_by_id(int(self.properties['item_to_id']))
+            if self.item_to is not None:
+                self.item_to.edges.append(self)
+                self.set_to_pos(self.item_to.mapToScene(self.item_to.boundingRect().center()))
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
 
     def disconnect_edge(self):
         # TODO: Make it more loose coupled. Now it's a field for errors.
-        while self in self.itemFrom.edges:
-            self.itemFrom.edges.remove(self)
-        while self in self.itemTo.edges:
-            self.itemTo.edges.remove(self)
+        while self in self.item_from.edges:
+            self.item_from.edges.remove(self)
+        while self in self.item_to.edges:
+            self.item_to.edges.remove(self)
         self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
 
     def paint(self, painter, option, widget=None):
-        if self.itemFrom is None or self.itemTo is None:
+        if self.item_from is None or self.item_to is None:
             return
-        painter.setPen(self.edgePen)
-        post_start = self.itemFrom.mapToScene(QtCore.QPointF()) + self.itemFrom.boundingRect().center()
-        pos_end = self.itemTo.mapToScene(QtCore.QPointF()) + self.itemTo.boundingRect().center()
+        painter.setPen(self.edge_pen)
+        pos_start = self.item_from.mapToScene(QtCore.QPointF()) + self.item_from.boundingRect().center()
+        pos_end = self.item_to.mapToScene(QtCore.QPointF()) + self.item_to.boundingRect().center()
 
-        painter.drawLine(post_start, pos_end)
+        knot_a = QtCore.QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_start.y())
+        knot_b = QtCore.QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_end.y())
+        path = QtGui.QPainterPath()
+        path.moveTo(pos_start)
+        path.cubicTo(knot_a, knot_b, pos_end)
+        painter.drawPath(path)
 
     def set_from_pos(self, point_from):
-        self.fromPos = QtCore.QPointF(point_from)
+        self.from_pos = QtCore.QPointF(point_from)
 
-        top_left_x = min(float(self.fromPos.x()), float(self.toPos.x()))
-        top_left_y = min(float(self.fromPos.y()), float(self.toPos.y()))
+        top_left_x = min(float(self.from_pos.x()), float(self.to_pos.x()))
+        top_left_y = min(float(self.from_pos.y()), float(self.to_pos.y()))
 
-        bottom_right_x = max(float(self.fromPos.x()), float(self.toPos.x()))
-        bottom_right_y = max(float(self.fromPos.y()), float(self.toPos.y()))
-        self.brect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
+        bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
+        bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
+        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
 
     def set_to_pos(self, point_to):
-        self.toPos = QtCore.QPointF(point_to)
+        self.to_pos = QtCore.QPointF(point_to)
 
-        top_left_x = min(float(self.fromPos.x()), float(self.toPos.x()))
-        top_left_y = min(float(self.fromPos.y()), float(self.toPos.y()))
+        top_left_x = min(float(self.from_pos.x()), float(self.to_pos.x()))
+        top_left_y = min(float(self.from_pos.y()), float(self.to_pos.y()))
 
-        bottom_right_x = max(float(self.fromPos.x()), float(self.toPos.x()))
-        bottom_right_y = max(float(self.fromPos.y()), float(self.toPos.y()))
-        self.brect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
+        bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
+        bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
+        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
 
     def boundingRect(self, *args, **kwargs):
-        return self.brect
+        return self.bounding_rect
