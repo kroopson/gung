@@ -100,6 +100,9 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         return QtGui.QGraphicsItem.itemChange(self, change, value)
 
 
+items = []
+
+
 class GungItem(QtGui.QGraphicsItem):
     element_type = "GungNode"
 
@@ -111,7 +114,13 @@ class GungItem(QtGui.QGraphicsItem):
 
     def __init__(self, parent=None, scene=None, node_id=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
-        self.self_target = self  # This keeps the reference to the object so it won't get collected by garbage collector
+
+        # How idiotic this was...
+        # self.self_target = self  # This keeps the reference to the object so it
+        # won't get collected by garbage collector
+
+        # keep this item in a list to avoid collecting it by the garbage collector
+        items.append(self)
 
         self.id_ = None
 
@@ -564,6 +573,9 @@ class GungGroup(GungItem):
 
     def update_bounding_rect(self):
         rect = None
+        if not self.childItems():  # return the last registered bounding box if the group has no children.
+            return self.rect
+
         for item in self.childItems():  # iterate only groups and nodes
             if not item.__class__.__name__ == "GungNode" and not item.__class__.__name__ == "GungGroup":
                 continue
