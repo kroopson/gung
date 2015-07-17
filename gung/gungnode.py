@@ -6,6 +6,7 @@ import inspect
 import sys
 
 from config import GungConfig, ConfigParser
+
 config = GungConfig()
 
 
@@ -30,7 +31,6 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
         self.storedPos = QtCore.QPointF()
 
-        # TODO: Store this in some settings.
         self.itemWidth = config.getfloat("Resizer", "Width")
         self.itemHeight = config.getfloat("Resizer", "Height")
 
@@ -115,9 +115,9 @@ class GungItem(QtGui.QGraphicsItem):
     def __init__(self, parent=None, scene=None, node_id=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
 
-        # How idiotic this was...
         # self.self_target = self  # This keeps the reference to the object so it
         # won't get collected by garbage collector
+        # later on: How idiotic this was...
 
         # keep this item in a list to avoid collecting it by the garbage collector
         items.append(self)
@@ -180,7 +180,7 @@ class GungItem(QtGui.QGraphicsItem):
         except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
             print "Failed to get the color option", section, option
             r, g, b = (0, 0, 0,)
-        return QtGui.QColor(r, g, b,)
+        return QtGui.QColor(r, g, b, )
 
     def itemChange(self, change, value):
         """
@@ -320,8 +320,10 @@ class GungNode(GungItem):
         of all attributes. This is needed if you want to have plugs "sticked" to the right edge
         of this node.
         """
-        self.properties['node_width'] = size.x()
-        self.properties['node_height'] = size.y()
+        size_x = size.x() if size.x() >= self.properties['min_width'] else self.properties['min_width']
+        self.properties['node_width'] = size_x
+        size_y = size.y() if size.y() >= self.properties['min_height'] else self.properties['min_height']
+        self.properties['node_height'] = size_y
         self.update()
 
         self.prepareGeometryChange()
@@ -594,7 +596,7 @@ class GungGroup(GungItem):
             self.rect = QtCore.QRectF(rect)
         self.update()
 
-    def paint(self,  painter, option, widget=None):
+    def paint(self, painter, option, widget=None):
         painter.setBrush(self.group_brush)
         painter.drawRect(self.rect)
 
@@ -701,7 +703,8 @@ class GungEdge(GungItem):
 
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
-        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
+        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
+                                           bottom_right_y - top_left_y)
 
     def set_to_pos(self, point_to):
         self.to_pos = QtCore.QPointF(point_to)
@@ -711,7 +714,8 @@ class GungEdge(GungItem):
 
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
-        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x, bottom_right_y - top_left_y)
+        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
+                                           bottom_right_y - top_left_y)
 
     def boundingRect(self, *args, **kwargs):
         return self.bounding_rect

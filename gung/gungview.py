@@ -3,7 +3,7 @@ from PySide.QtCore import Signal
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
-versionString = "GUNG v.0.0.8"
+versionString = "GUNG v.0.1.1"
 
 
 class GungGraphicsView(QtGui.QGraphicsView):
@@ -240,24 +240,19 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if event.key() == QtCore.Qt.Key_F:
             self.zoom_to_selected()
             event.accept()
-
-        if event.key() == QtCore.Qt.Key_A:
+        elif event.key() == QtCore.Qt.Key_A:
             self.zoom_to_all()
             event.accept()
-
-        if event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
             self.undoSignal.emit()
-
-        if event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
             self.redoSignal.emit()
-
-        if event.key() == QtCore.Qt.Key_Delete:
+        elif event.key() == QtCore.Qt.Key_Delete:
             self.deleteSignal.emit()
-
-        if event.key() == QtCore.Qt.Key_G and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == QtCore.Qt.Key_G and event.modifiers() == QtCore.Qt.ControlModifier:
             self.groupSignal.emit()
-
-        return QtGui.QGraphicsView.keyPressEvent(self, event)
+        else:
+            return QtGui.QGraphicsView.keyPressEvent(self, event)
 
     def drawBackground(self, painter, rect):
         painter.setFont(self.font)

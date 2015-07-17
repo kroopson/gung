@@ -242,12 +242,12 @@ class GungScene(QGraphicsScene):
         for edge in self.dragFrom.edges:
             if edge is None:
                 continue
-            if hititem in [edge.itemFrom, edge.itemTo]:
+            if hititem in [edge.item_from, edge.item_to]:
                 return
         for edge in hititem.edges:
             if edge is None:
                 continue
-            if self.dragFrom in [edge.itemFrom, edge.itemTo]:
+            if self.dragFrom in [edge.item_from, edge.item_to]:
                 return
         
         # --- finally create an edge
