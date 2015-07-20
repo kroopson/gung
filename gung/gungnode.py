@@ -566,8 +566,8 @@ class GungInPlug(GungPlug):
 
         edge = self.edges.pop()
         item_from = edge.item_from
-        self.scene().delete_edge_call(edge_id=edge.properties['node_id'])
         self.scene().init_dragging_edge(item_from.mapToScene(item_from.boundingRect().center()), item_from)
+        self.scene().delete_edge_call(edge_id=edge.properties['node_id'])
 
 
 class GungOutPlug(GungPlug):

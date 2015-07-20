@@ -323,6 +323,7 @@ class GungScene(QGraphicsScene):
     def create_edge_call(self, item_from, item_to):
         """
         Slot called to create the edge. This should be reimplemented in the subclass to modify the data model.
+
             :param item_from: GungPlug from which the edge needs to be created
             :type item_from: gung.gungnode.GungPlug
             :param item_to: GungPlug to which the edge needs to be created
@@ -335,6 +336,7 @@ class GungScene(QGraphicsScene):
     def delete_edge_call(self, edge_id):
         """
         Slot called to remove an edge. This should be reimplemented in the subclass to modify the data model.
+
             :param edge_id: scene id of the edge to delete
             :type edge_id: int
         """
