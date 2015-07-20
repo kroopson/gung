@@ -80,9 +80,10 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         Called whenever a change happens to the instance of this class like move, click, resize ect.
         In this case used to resize the parent node and to limit the position to the minimal size constraints
         of a node.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :return: QVariant
+
+            :param change: defines a type of a change
+            :param value: defines a value of a change
+            :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             parent_min_width = self.parentItem().properties['min_width']
@@ -104,13 +105,12 @@ items = []
 
 
 class GungItem(QtGui.QGraphicsItem):
-    element_type = "GungNode"
-
     """
     Base class for all GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
     that will be used later in every important operation (especially during the connection of the plugs, undo/redo,
     save/load). The utility items like resizer are not considered as a GUNG items.
     """
+    element_type = "GungNode"
 
     def __init__(self, parent=None, scene=None, node_id=None):
         QtGui.QGraphicsItem.__init__(self, parent, scene)
@@ -187,9 +187,10 @@ class GungItem(QtGui.QGraphicsItem):
         Called whenever a change happens to the instance of this class like move, click, resize ect.
         In this case used to register position changes of the nodes, so that they can be reverted using the
         undo queue.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :return: QVariant
+
+            :param change: defines a type of a change
+            :param value: defines a value of a change
+            :return: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
@@ -204,11 +205,11 @@ class GungItem(QtGui.QGraphicsItem):
 
 
 class GungNode(GungItem):
-    element_type = "GungNode"
-    resizerClass = GungNodeResizer
     """
     Base class of the graphical node. Inherit this to get some specific look of your nodes.
     """
+    element_type = "GungNode"
+    resizerClass = GungNodeResizer
 
     def __init__(self, name="", parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
@@ -359,9 +360,10 @@ class GungNode(GungItem):
         Called whenever a change happens to the instance of this class like move, click, resize ect.
         In this case used to register position changes of the nodes, so that they can be reverted using the
         undo queue.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :rtype: QVariant
+
+            :param change: defines a type of a change
+            :param value: defines a value of a change
+            :rtype: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
@@ -411,9 +413,6 @@ class GungAttribute(GungItem):
 
     def paint(self, painter, option, widget=None):
         pass
-        # painter.setPen(QtGui.QPen(QtGui.QColor(180, 210, 180)))
-        # painter.setBrush(QtGui.QBrush(QtGui.QColor(0, 0, 0)))
-        # painter.drawRect(self.boundingRect())
 
     def rearrange_plugs(self):
         plugs = []
@@ -425,19 +424,19 @@ class GungAttribute(GungItem):
         if not len(plugs):
             return
 
-        inplugs = []
-        outplugs = []
+        in_plugs = []
+        out_plugs = []
 
         for p in plugs:
             if isinstance(p, GungOutPlug):
-                outplugs.append(p)
+                out_plugs.append(p)
                 continue
             if isinstance(p, GungPlug):
-                inplugs.append(p)
+                in_plugs.append(p)
 
         index = 0
         total_width = 0
-        for p in inplugs:
+        for p in in_plugs:
             w = index * p.properties['plug_width']
             p.setX(w)
             p.setY(0)
@@ -446,7 +445,7 @@ class GungAttribute(GungItem):
 
         parent_bounding = self.parentItem().boundingRect()
         index = 1
-        for p in outplugs:
+        for p in out_plugs:
             w = (index * p.properties['plug_width']) + 1
             p.setX(parent_bounding.width() - w)
             p.setY(0)
@@ -528,9 +527,10 @@ class GungPlug(GungItem):
         Called whenever a change happens to the instance of this class like move, click, resize ect.
         In this case used to resize the parent node and to limit the position to the minimal size constraints
         of a node.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :return: QVariant
+
+            :param change: defines a type of a change
+            :param value: defines a value of a change
+            :return: QVariant
         """
 
         if change == QtGui.QGraphicsItem.ItemScenePositionHasChanged:
@@ -545,6 +545,37 @@ class GungPlug(GungItem):
                     edge.set_from_pos(self.mapToScene(self.boundingRect().center()))
 
         return QtGui.QGraphicsItem.itemChange(self, change, value)
+
+
+class GungInPlug(GungPlug):
+    element_type = "GungInPlug"
+    acceptsConnections = "GungOutPlug"
+
+    def __init__(self, parent=None, scene=None):
+        GungPlug.__init__(self, parent=parent, scene=scene)
+
+    def mousePressEvent(self, event):
+        """
+        Overrides the GungPlug mousePressEvent method. If this plug has any incoming connections it will remove
+        the edge placed on top of edges stack and it will start the dragging edge.
+        """
+        if not self.edges:
+            event.accept()
+            self.scene().init_dragging_edge(self.mapToScene(self.boundingRect().center()), self)
+            return
+
+        edge = self.edges.pop()
+        item_from = edge.item_from
+        self.scene().delete_edge_call(edge_id=edge.properties['node_id'])
+        self.scene().init_dragging_edge(item_from.mapToScene(item_from.boundingRect().center()), item_from)
+
+
+class GungOutPlug(GungPlug):
+    element_type = "GungOutPlug"
+    acceptsConnections = "GungPlug,GungInPlug"
+
+    def __init__(self, parent=None, scene=None):
+        GungPlug.__init__(self, parent=parent, scene=scene)
 
 
 class GungGroup(GungItem):
@@ -613,9 +644,10 @@ class GungGroup(GungItem):
         Called whenever a change happens to the instance of this class like move, click, resize ect.
         In this case used to register position changes of the nodes, so that they can be reverted using the
         undo queue.
-        :param change: defines a type of a change
-        :param value: defines a value of a change
-        :rtype: QVariant
+
+            :param change: defines a type of a change
+            :param value: defines a value of a change
+            :rtype: QVariant
         """
         if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
@@ -625,14 +657,6 @@ class GungGroup(GungItem):
             #     self.parent_.update_bounding_rect()
 
         return GungItem.itemChange(self, change, value)
-
-
-class GungOutPlug(GungPlug):
-    element_type = "GungOutPlug"
-    acceptsConnections = "GungPlug"
-
-    def __init__(self, parent=None, scene=None):
-        GungPlug.__init__(self, parent=parent, scene=scene)
 
 
 class GungEdge(GungItem):

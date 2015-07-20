@@ -2,7 +2,8 @@ from PySide import QtGui, QtCore
 from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
 from PySide.QtCore import Signal, Slot, QPointF, QRectF
 
-from gungcommand import GungCreateGroupCommand, GungCreateEdgeCommand, GungDeleteItemsCommand, GungMoveCommand
+from gungcommand import GungCreateGroupCommand, GungCreateEdgeCommand, GungDeleteItemsCommand, GungMoveCommand, \
+    GungDeleteEdgeCommand
 from gungcommand import GungResizeNodeCommand
 from gungnode import GungItem, GungPlug, GungNode, GungEdge, GungGroup, get_gung_node_classes
 import xml.dom.minidom as xmldom
@@ -226,7 +227,7 @@ class GungScene(QGraphicsScene):
         if hititem is None:
             return
         
-        # --- top if there is no item from which the dragging started
+        # --- stop if there is no item from which the dragging started
         if self.dragFrom is None:
             return
         
@@ -251,11 +252,14 @@ class GungScene(QGraphicsScene):
                 return
         
         # --- finally create an edge
+        self.create_edge_call(self.dragFrom, hititem)
 
-        command = GungCreateEdgeCommand(self, self.dragFrom, hititem)
-        self.undoStack.push(command)
-        
     def remove_edge(self, edge_id):
+        """
+        This is an actual method that deletes the edge. It should be called with care because it skips the undo stack.
+            :param edge_id: id of an edge to delete.
+            :type edge_id: int
+        """
         created_edge = self.get_item_by_id(edge_id)
         if created_edge is None:
             return
@@ -314,6 +318,28 @@ class GungScene(QGraphicsScene):
     def print_graph(self):
         for item in self.items():
             print item
+
+    @Slot(GungPlug, GungPlug)
+    def create_edge_call(self, item_from, item_to):
+        """
+        Slot called to create the edge. This should be reimplemented in the subclass to modify the data model.
+            :param item_from: GungPlug from which the edge needs to be created
+            :type item_from: gung.gungnode.GungPlug
+            :param item_to: GungPlug to which the edge needs to be created
+            :type item_to: gung.gungnode.GungPlug
+        """
+        command = GungCreateEdgeCommand(self, item_from, item_to)
+        self.undoStack.push(command)
+
+    @Slot(int)
+    def delete_edge_call(self, edge_id):
+        """
+        Slot called to remove an edge. This should be reimplemented in the subclass to modify the data model.
+            :param edge_id: scene id of the edge to delete
+            :type edge_id: int
+        """
+        command = GungDeleteEdgeCommand(self, edge_id)
+        self.undoStack.push(command)
 
 
 class GungDragEdge(QGraphicsItem):

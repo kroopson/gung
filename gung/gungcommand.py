@@ -92,6 +92,31 @@ class GungCreateEdgeCommand(QUndoCommand):
         self.created_edge_id = int(e.properties['node_id'])
 
 
+class GungDeleteEdgeCommand(QUndoCommand):
+    """
+    Deletes an edge with the id passed in constructor.
+    """
+    def __init__(self, scene, edge_id):
+        QUndoCommand.__init__(self)
+
+        edge = scene.get_item_by_id(edge_id)
+        if not edge:
+            raise ValueError("Wrong id passed")
+
+        self.from_node_id = int(edge.item_from.properties['node_id'])
+        self.to_node_id = int(edge.item_to.properties['node_id'])
+        self.scene = scene
+        self.deleted_edge_id = edge_id
+
+    def undo(self, *args, **kwargs):
+        e = GungEdge(int(self.from_node_id), int(self.to_node_id), parent=None, scene=self.scene)
+        e.reconnect_edge()
+        self.deleted_edge_id = int(e.properties['node_id'])
+
+    def redo(self, *args, **kwargs):
+        self.scene.remove_edge(self.deleted_edge_id)
+
+
 class GungResizeNodeCommand(QUndoCommand):
     """
     Resizes the node.
