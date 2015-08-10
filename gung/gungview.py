@@ -179,7 +179,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         scale_matrix = QtGui.QTransform.fromScale(scale_value, scale_value)
         scaled = scale_matrix * top_left_transform
         self.setTransform(scaled)
-        
+
         # This point will be placed in a center of the view
         fit_center = rect.center()
         fit_center_scaled = scaled.map(QtCore.QPoint(fit_center.x(), fit_center.y()))  # scale matrix changed this

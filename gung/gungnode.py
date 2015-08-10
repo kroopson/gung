@@ -222,6 +222,8 @@ class GungNode(GungItem):
         self.properties['min_width'] = config.getfloat("Node", "MinimalWidth")
         self.properties['min_height'] = config.getfloat("Node", "MinimalHeight")
 
+        self.properties['attributes_offset'] = config.getfloat("Node", "AttributesOffset")
+
         self.bboxW = config.getfloat("Node", "MinimalWidth")
         self.bboxH = config.getfloat("Node", "MinimalHeight")
 
@@ -233,7 +235,7 @@ class GungNode(GungItem):
         self.unselectedPen = QtGui.QPen(self.get_color_config("Node", "UnSelectedEdgeColor"))
         self.textPen = QtGui.QPen(self.get_color_config("Node", "TextColor"))
 
-        self.plugFont = QtGui.QFont("Arial", 7)
+        # self.node_font = QtGui.QFont("Arial", 7)
 
         self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
@@ -282,16 +284,16 @@ class GungNode(GungItem):
 
             child_item.setX(0)
             if current_height == -1:
-                current_height = 20
+                current_height = self.properties['attributes_offset']
 
             child_item.setX(0)
             child_item.setY(current_height)
             current_height += child_item.properties['attr_height'] + 2
 
         if current_height >= 35:
-            self.properties['min_height'] = current_height + 20.0
+            self.properties['min_height'] = current_height + self.properties['attributes_offset']
         else:
-            self.properties['min_height'] = 35 + 20.0
+            self.properties['min_height'] = 35 + self.properties['attributes_offset']
 
         if self.properties['node_height'] < self.properties['min_height']:
             self.properties['node_height'] = self.properties['min_height']
@@ -410,6 +412,7 @@ class GungAttribute(GungItem):
         GungItem.__init__(self, parent, scene)
 
         self.properties['attr_height'] = config.getfloat("Attribute", "Height")
+        self.properties['edge_offset'] = 0.0
 
     def paint(self, painter, option, widget=None):
         pass
@@ -435,10 +438,10 @@ class GungAttribute(GungItem):
                 in_plugs.append(p)
 
         index = 0
-        total_width = 0
+        total_width = self.properties["edge_offset"]
         for p in in_plugs:
             w = index * p.properties['plug_width']
-            p.setX(w)
+            p.setX(w + self.properties["edge_offset"])
             p.setY(0)
             total_width += p.properties['plug_width']
             index += 1
@@ -447,7 +450,7 @@ class GungAttribute(GungItem):
         index = 1
         for p in out_plugs:
             w = (index * p.properties['plug_width']) + 1
-            p.setX(parent_bounding.width() - w)
+            p.setX(parent_bounding.width() - w - self.properties["edge_offset"])
             p.setY(0)
             total_width += p.properties['plug_width']
             index += 1
