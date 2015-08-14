@@ -413,33 +413,51 @@ class GungAttribute(GungItem):
 
         self.properties['attr_height'] = config.getfloat("Attribute", "Height")
         self.properties['edge_offset'] = 0.0
+        self.properties['inverted'] = False
 
     def paint(self, painter, option, widget=None):
         pass
 
+    def set_inverted(self, inverted):
+        """
+        Changes the property "inverted". If this property is set to True GungOutPlugs will be placed on the left of the
+        node
+
+            :param inverted: value of "inverted" property
+            :type inverted: bool
+        """
+        self.properties['inverted'] = inverted
+
     def rearrange_plugs(self):
         plugs = []
-        for childitem in self.childItems():
-            if not isinstance(childitem, GungPlug):
+        for child_item in self.childItems():
+            if not isinstance(child_item, GungPlug):
                 continue
-            plugs.append(childitem)
+            plugs.append(child_item)
 
         if not len(plugs):
             return
 
-        in_plugs = []
-        out_plugs = []
+        left_plugs = []
+        right_plugs = []
 
         for p in plugs:
-            if isinstance(p, GungOutPlug):
-                out_plugs.append(p)
-                continue
-            if isinstance(p, GungPlug):
-                in_plugs.append(p)
+            if not self.properties['inverted']:
+                if isinstance(p, GungOutPlug):
+                    right_plugs.append(p)
+                    continue
+                if isinstance(p, GungPlug):
+                    left_plugs.append(p)
+            else:
+                if isinstance(p, GungOutPlug):
+                    left_plugs.append(p)
+                    continue
+                if isinstance(p, GungPlug):
+                    right_plugs.append(p)
 
         index = 0
         total_width = self.properties["edge_offset"]
-        for p in in_plugs:
+        for p in left_plugs:
             w = index * p.properties['plug_width']
             p.setX(w + self.properties["edge_offset"])
             p.setY(0)
@@ -448,7 +466,7 @@ class GungAttribute(GungItem):
 
         parent_bounding = self.parentItem().boundingRect()
         index = 1
-        for p in out_plugs:
+        for p in right_plugs:
             w = (index * p.properties['plug_width']) + 1
             p.setX(parent_bounding.width() - w - self.properties["edge_offset"])
             p.setY(0)

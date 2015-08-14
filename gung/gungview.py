@@ -3,7 +3,7 @@ from PySide.QtCore import Signal
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 QString = str
-versionString = "GUNG v.0.1.1"
+versionString = "GUNG v.0.2.1"
 
 
 class GungGraphicsView(QtGui.QGraphicsView):
@@ -32,16 +32,57 @@ class GungGraphicsView(QtGui.QGraphicsView):
         self.zoom_start = QtCore.QPoint()
         self.zoom_start_transform = QtGui.QTransform()
 
-        self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
+        # self.setDragMode(QtGui.QGraphicsView.RubberBandDrag)
 
         self.setFocusPolicy(QtCore.Qt.WheelFocus)
 
+        # =======================================================================
+        # SELECTION OF NODES
+        # =======================================================================
+        # If true the widget will add to the selection
+        self.extend_selection = False
+        self.remove_selection = False
+        self.selection_start = QtCore.QPoint()
+        self.rubber_band = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)
+
     def mousePressEvent(self, event):
+        if event.modifiers() == QtCore.Qt.ShiftModifier:
+            self.extend_selection = True
+        else:
+            self.extend_selection = False
+
+        if event.modifiers() == QtCore.Qt.AltModifier:
+            self.remove_selection = True
+        else:
+            self.remove_selection = False
+
         if event.button() == QtCore.Qt.MidButton:
             self.prev_mouse_pos = event.globalPos()
         elif event.button() == QtCore.Qt.RightButton:
             self.zoom_start = event.pos()
             self.zoom_start_transform = self.transform()
+        elif event.button() == QtCore.Qt.LeftButton:
+            node = self.scene().get_node_at_point(self.mapToScene(event.pos()))
+            if node:
+                if not self.extend_selection and not node.isSelected() and not self.remove_selection:
+                    for item in self.scene().selectedItems():
+                        item.setSelected(False)
+
+                if self.remove_selection:
+                    node.setSelected(False)
+                else:
+                    node.setSelected(True)
+
+                if self.extend_selection or self.remove_selection:
+                    event.accept()
+                    return
+                else:
+                    return QtGui.QGraphicsView.mousePressEvent(self, event)
+            else:
+                self.selection_start = event.pos()
+                self.rubber_band.setGeometry(QtCore.QRect(self.selection_start, self.selection_start))
+                self.rubber_band.show()
+                event.accept()
         else:
             return QtGui.QGraphicsView.mousePressEvent(self, event)
 
@@ -60,16 +101,68 @@ class GungGraphicsView(QtGui.QGraphicsView):
             elif event.pos().x() < self.zoom_start.x():
                 scale_value = 1.0 / (1 + (abs((event.x() - self.zoom_start.x())) / 100.0))
                 self.zoom(scale_value)
+        elif event.buttons() == QtCore.Qt.LeftButton:
+            if self.rubber_band.isHidden():
+                return QtGui.QGraphicsView.mouseMoveEvent(self, event)
+            selection_rect = QtCore.QRect()
+            point = event.pos()
+            selection_rect.setX(point.x() if point.x() < self.selection_start.x() else self.selection_start.x())
+            selection_rect.setY(point.y() if point.y() < self.selection_start.y() else self.selection_start.y())
+
+            selection_rect.setWidth(abs(point.x() - self.selection_start.x()))
+            selection_rect.setHeight(abs(point.y() - self.selection_start.y()))
+            self.rubber_band.setGeometry(selection_rect)
+            event.accept()
         else:
             return QtGui.QGraphicsView.mouseMoveEvent(self, event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            if not self.rubber_band.isHidden():
+                # --- selection of items with rubber band is handled here
+                select = True
+                if event.modifiers() == QtCore.Qt.ShiftModifier:
+                    self.extend_selection = True
+                elif event.modifiers() == QtCore.Qt.AltModifier:
+                    self.extend_selection = True
+                    select = False
+                else:
+                    self.extend_selection = False
+                self.select_items_in_rubber_band(self.rubber_band.geometry(), self.extend_selection, select)
+            else:
+                # --- selection through click is handled here
+                item = self.itemAt(event.pos())
+                if item is not None:
+                    if not self.remove_selection:
+                        item.setSelected(True)
+                    else:
+                        item.setSelected(False)
+        self.rubber_band.hide()
+        QtGui.QGraphicsView.mouseReleaseEvent(self, event)
+
+    def select_items_in_rubber_band(self, rect, append=True, select=True):
+        modified = False
+        if append is False:
+            self.scene().clearSelection()
+        scene_top_left = self.mapToScene(rect.topLeft())
+        scene_bottom_right = self.mapToScene(rect.bottomRight())
+        items = self.scene().items(QtCore.QRectF(scene_top_left, scene_bottom_right),
+                                   QtCore.Qt.IntersectsItemBoundingRect)
+        for item in items:
+            if (item.flags() & QtGui.QGraphicsItem.ItemIsSelectable) == QtGui.QGraphicsItem.ItemIsSelectable:
+                item.setSelected(select)
+                modified = True
+        if modified:
+            self.scene().emit(QtCore.SIGNAL("selectionChanged()"))
 
     def zoom(self, scale_value):
         """
         Changes the scale of the current scene by the value provided with argument. This scale is calculated mostly
         during the right mouse dragging.
-        :type scale_value: float
-        :return: None
-        :rtype: None
+
+            :type scale_value: float
+            :return: None
+            :rtype: None
         """
         if scale_value <= 0.1:
             scale_value = .01
@@ -132,8 +225,9 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def resizeEvent(self, event):
         """
         Resizes the scene together with scaling of the viewport.
-        :param event:
-        :return: None
+
+            :param event:
+            :return: None
         """
         current_size = self.size()
 
@@ -158,10 +252,11 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def fitInView(self, rect, keep_aspect_ratio):
         """
         Overrides default fitInView method to keep the maximum zoom value (we want to prevent from zooming too much)
-        :param rect: Rectangle to fit in the view
-        :type rect: QtCore.QRectF
-        :param keep_aspect_ratio: not used.
-        :return: None
+
+            :param rect: Rectangle to fit in the view
+            :type rect: QtCore.QRectF
+            :param keep_aspect_ratio: not used.
+            :return: None
         """
 
         self.setTransform(QtGui.QTransform())  # Start from identity transform
@@ -196,7 +291,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def zoom_to_selected(self):
         """
         Fits the united bounding rect of selected gung nodes in the viewport keeping the maximum zoom value.
-        :return: None
+
+            :return: None
         """
         sel_items = self.scene().selectedItems()
         if len(sel_items) > 0:
@@ -225,8 +321,9 @@ class GungGraphicsView(QtGui.QGraphicsView):
     def get_nodes(self):
         """
         Gathers all gung items from the current scene
-        :return: nodes
-        :rtype: list of gung.gungnode.GungItem
+
+            :return: nodes
+            :rtype: list of gung.gungnode.GungItem
         """
         scene_items = self.scene().items()
         nodes = []
