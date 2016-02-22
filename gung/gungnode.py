@@ -58,6 +58,10 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         """
         Override of a paint class from QGraphicsItem.
         Implement this to give a resizer the desired look.
+
+            :param QtGui.QPainter painter:
+            :param option:
+            :param widget:
         """
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         # draw body of a node
@@ -138,6 +142,8 @@ class GungItem(QtGui.QGraphicsItem):
     def as_xml(self, document):
         """
         Returns this item and all its sub items as an xml element.
+
+            :param document:
         """
         element = document.createElement(self.element_type)
 
@@ -155,6 +161,11 @@ class GungItem(QtGui.QGraphicsItem):
         return element
 
     def from_xml(self, xmlnode):
+        """
+        Deserializes a gung item from the provided xml node. The attributes stored in the xml will be loaded on self.
+
+            :param xmlnode:
+        """
         for k in xmlnode.attributes.keys():
             if k not in self.properties.keys():
                 continue
@@ -305,11 +316,17 @@ class GungNode(GungItem):
             child_item.rearrange_plugs()
 
     def mousePressEvent(self, event):
+        """
+            :param QtGui.QMouseEvent event:
+        """
         self.scene().topZ += .0001
         self.setZValue(self.scene().topZ)
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
+        """
+            :param QtGui.QMouseEvent event:
+        """
         return QtGui.QGraphicsItem.mousePressEvent(self, event)
 
     def from_xml(self, xmlnode):
@@ -322,6 +339,8 @@ class GungNode(GungItem):
         Sets an attributes in properties dict, updates bounding box and calls the rearrangement
         of all attributes. This is needed if you want to have plugs "sticked" to the right edge
         of this node.
+
+            :param QtGui.QSize size:
         """
         size_x = size.x() if size.x() >= self.properties['min_width'] else self.properties['min_width']
         self.properties['node_width'] = size_x
@@ -338,6 +357,10 @@ class GungNode(GungItem):
         """
         Override of QGraphicsItem.paint method. Implement this in your child classes to
         make nodes with the look you want.
+
+            :param QtGui.QPainter painter:
+            :param option:
+            :param widget:
         """
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
 
@@ -526,6 +549,10 @@ class GungPlug(GungItem):
     def paint(self, painter, option, widget=None):
         """
         Override this method to give your plugs a custom look.
+
+            :param QtGui.QPainter painter:
+            :param option:
+            :param widget:
         """
         painter.setPen(self.plugPen)
 
@@ -569,6 +596,9 @@ class GungPlug(GungItem):
 
 
 class GungInPlug(GungPlug):
+    """
+    This class represents all the plugs that will accept all incoming connections.
+    """
     element_type = "GungInPlug"
     acceptsConnections = "GungOutPlug"
 
@@ -579,6 +609,8 @@ class GungInPlug(GungPlug):
         """
         Overrides the GungPlug mousePressEvent method. If this plug has any incoming connections it will remove
         the edge placed on top of edges stack and it will start the dragging edge.
+
+            :param event:
         """
         if not self.edges:
             event.accept()
@@ -592,6 +624,9 @@ class GungInPlug(GungPlug):
 
 
 class GungOutPlug(GungPlug):
+    """
+    This class represents all the plugs from which you'll be making connections.
+    """
     element_type = "GungOutPlug"
     acceptsConnections = "GungPlug,GungInPlug"
 
@@ -600,6 +635,10 @@ class GungOutPlug(GungPlug):
 
 
 class GungGroup(GungItem):
+    """
+    Visual grouping item. It creates an outline around the items that are its children so they can be organized and
+    moved together.
+    """
     element_type = "GungGroup"
 
     def __init__(self, parent=None, scene=None, node_id=None):

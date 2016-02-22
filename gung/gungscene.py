@@ -28,6 +28,11 @@ class GungScene(QGraphicsScene):
         self.removedItems = []
 
     def get_new_id(self):
+        """
+        Returns a first id number that's not yet used in the scene. You have to use it while creating a new scene item.
+
+            :rtype: int
+        """
         index = 0
         current_ids = []
         for item in self.items():
@@ -45,10 +50,9 @@ class GungScene(QGraphicsScene):
 
     def get_item_by_id(self, id_):
         """
-        Returns the GungItem with provided id
+        Returns the GungItem with provided id.
 
-            :param id_:
-            :return:
+            :param int id_:
             :rtype: GungItem or GungNode or GungPlug or GungEdge
         """
         for item in self.items():
@@ -60,7 +64,8 @@ class GungScene(QGraphicsScene):
 
     def as_xml(self):
         """
-        Returns self as an xml document.
+        Returns this scene as an xml document. It's a simple serialization, however your data model should support its
+        own serialization.
         """
         impl = xmldom.getDOMImplementation()
         doc = impl.createDocument(None, "GungGraph", None)
@@ -81,6 +86,8 @@ class GungScene(QGraphicsScene):
         """
         Parses XML string and fills the current scene with the nodes. The scene MUST be empty since
         this method sets the node id's that are loaded to the values stored in an xml.
+
+            :param str xml_string: string to parse (must be a valid xml).
         """
         dom = xmldom.parseString(xml_string)
         
@@ -101,7 +108,7 @@ class GungScene(QGraphicsScene):
 
     def init_dragging_edge(self, drag_start, drag_end):
         """
-        Starts the dragging and sets the start position of a dragged edge.
+        Starts the rubber edge dragging and sets the start position of a dragged edge.
 
             :param drag_start: QPointF
             :param drag_end: GungItem
@@ -116,6 +123,12 @@ class GungScene(QGraphicsScene):
         self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
         
     def mouseMoveEvent(self, event):
+        """
+        Called whenever the mouse is moved inside the viewport and one of mouse buttons is pressed.
+        It's taking care of the rubber edge dragging etc.
+
+            :param QtGui.QMouseEvent event:
+        """
         if event.buttons() == QtCore.Qt.MidButton:
             return QGraphicsScene.mouseMoveEvent(self, event)
         if event.buttons() == QtCore.Qt.RightButton:
@@ -151,6 +164,11 @@ class GungScene(QGraphicsScene):
         return QGraphicsScene.mouseMoveEvent(self, event)
     
     def mouseReleaseEvent(self, event):
+        """
+        Called whenever the mouse button is released after it's been clicked inside viewport.
+
+            :param QtGui.QMouseEvent event:
+        """
         if self.nodesHaveMoved:
             self.check_if_nodes_moved()
             self.nodesHaveMoved = False
@@ -291,10 +309,18 @@ class GungScene(QGraphicsScene):
         self.removeItem(created_edge)
         
     def update_dragging_edge(self, pos):
+        """
+        Sets the new target position for the rubber edge and forces it to update
+
+            :param pos:
+        """
         self.draggingEdge.pos_end = pos
         self.draggingEdge.update_position()
 
     def hide_dragging_edge(self):
+        """
+        Hides the rubber edge from the user.
+        """
         self.isDragging = False
         self.draggingEdge.post_start = None
         self.draggingEdge.pos_end = None
@@ -304,6 +330,13 @@ class GungScene(QGraphicsScene):
         self.parent().unsetCursor()
 
     def resize_node(self, node_id, size, previous_size):
+        """
+        Changes the size of the node with the given node id.
+
+            :param node_id:
+            :param size:
+            :param previous_size:
+        """
         c = GungResizeNodeCommand(self, node_id, size.x(), size.y(), previous_size.x(), previous_size.y())
         self.undoStack.push(c)
 

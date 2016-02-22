@@ -1,10 +1,11 @@
 import unittest
+
 from PySide import QtGui
+from PySide.QtGui import QApplication
 
 from gung.gungview import GungGraphicsView
 from gung.gungscene import GungScene
 from gung.gungnode import GungNode, GungPlug, GungAttribute
-from PySide.QtGui import QApplication
 
 
 class TestSequenceFunctions(unittest.TestCase):
