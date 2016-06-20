@@ -85,7 +85,7 @@ class GungScene(QGraphicsScene):
             if not isinstance(node, GungEdge):
                 continue
             xmlnode = node.as_xml(doc)
-            print xmlnode.toprettyxml()
+
             doc.documentElement.appendChild(xmlnode)
         return doc
     
