@@ -80,6 +80,13 @@ class GungScene(QGraphicsScene):
                 doc.documentElement.appendChild(xmlnode)
                 # sc = node.scene()  # I don't know why it's corrupted without it...
                 node.scene()
+
+        for node in self.items():
+            if not isinstance(node, GungEdge):
+                continue
+            xmlnode = node.as_xml(doc)
+            print xmlnode.toprettyxml()
+            doc.documentElement.appendChild(xmlnode)
         return doc
     
     def from_xml(self, xml_string):

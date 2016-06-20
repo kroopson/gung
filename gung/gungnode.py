@@ -720,7 +720,9 @@ class GungGroup(GungItem):
 
 
 class GungEdge(GungItem):
-    def __init__(self, item_from_id, item_to_id, parent=None, scene=None):
+    element_type = "GungEdge"
+
+    def __init__(self, item_from_id=-1, item_to_id=-1, parent=None, scene=None):
         GungItem.__init__(self, None, scene)
 
         self.properties['item_from_id'] = item_from_id
@@ -732,8 +734,12 @@ class GungEdge(GungItem):
         item_from = self.scene().get_item_by_id(int(item_from_id))
         item_to = self.scene().get_item_by_id(int(item_to_id))
 
-        self.from_pos = item_from.mapToScene(item_from.boundingRect().center())
-        self.to_pos = item_to.mapToScene(item_to.boundingRect().center())
+        if item_from and item_to:
+            self.from_pos = item_from.mapToScene(item_from.boundingRect().center())
+            self.to_pos = item_to.mapToScene(item_to.boundingRect().center())
+        else:
+            self.from_pos = QtCore.QPointF()
+            self.to_pos = QtCore.QPointF()
 
         self.edge_pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.setZValue(self.scene().topEdgeZ)
