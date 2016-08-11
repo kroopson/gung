@@ -97,7 +97,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
     def mouseMoveEvent(self, event):
         """
-        Called whenever the mouse is moved inside the viewport and one of mouse buttons is pressed.
+        Called whenever the mouse is moved inside the viewport and ONE of mouse buttons is pressed.
 
             :param QtGui.QMouseEvent event:
         """

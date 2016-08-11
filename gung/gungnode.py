@@ -36,6 +36,8 @@ class GungNodeResizer(QtGui.QGraphicsItem):
 
         self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
         self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        self.disabledPen = QtGui.QPen(QtGui.QColor(40, 40, 40))
+        self.disabled_brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
 
         self.sizePoint = QPoint(self.itemWidth, self.itemHeight)
 
@@ -69,7 +71,12 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             painter.setPen(self.parentItem().selectedPen)
         else:
             painter.setPen(self.parentItem().unselectedPen)
-        painter.setBrush(self.brush)
+
+        if self.flags() & QtGui.QGraphicsItem.ItemIsMovable:
+            painter.setBrush(self.brush)
+        else:
+            painter.setPen(self.disabledPen)
+            painter.setBrush(self.disabled_brush)
 
         painter.drawPolygon([QPoint(0, 0),
                              QPoint(-self.itemWidth, 0),
@@ -127,6 +134,7 @@ class GungItem(QtGui.QGraphicsItem):
         items.append(self)
 
         self.id_ = None
+        self._is_enabled = True
 
         self.properties = dict()
 
@@ -182,6 +190,25 @@ class GungItem(QtGui.QGraphicsItem):
                 continue
             gn = classes[node.tagName](parent=self, scene=self.scene())
             gn.from_xml(node)
+
+    def set_enabled(self, state):
+        self._is_enabled = state
+        self.update()
+
+        for i in self.childItems():
+            if isinstance(i, GungItem):
+                i.set_enabled(state)
+
+    def set_disabled(self, state):
+        self._is_enabled = False if state else True
+        self.update()
+
+        for i in self.childItems():
+            if isinstance(i, GungItem):
+                i.set_disabled(state)
+
+    def is_enabled(self):
+        return self._is_enabled
 
     @staticmethod
     def get_color_config(section, option):
@@ -243,6 +270,7 @@ class GungNode(GungItem):
         self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
 
         self.selectedPen = QtGui.QPen(self.get_color_config("Node", "SelectedEdgeColor"))
+        self.disabledPen = QtGui.QPen(QtGui.QColor(40, 40, 40))
         self.unselectedPen = QtGui.QPen(self.get_color_config("Node", "UnSelectedEdgeColor"))
         self.textPen = QtGui.QPen(self.get_color_config("Node", "TextColor"))
 
@@ -352,6 +380,20 @@ class GungNode(GungItem):
         self.update_bbox()
 
         self.rearrange_attributes()
+
+    def set_enabled(self, state):
+        super(GungNode, self).set_enabled(state)
+        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsMovable, state)
+        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, state)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, state)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, state)
+
+    def set_disabled(self, state):
+        super(GungNode, self).set_disabled(state)
+        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsMovable, not state)
+        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, not state)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, not state)
+        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, not state)
 
     def paint(self, painter, option, widget=None):
         """
@@ -514,6 +556,8 @@ class GungPlug(GungItem):
     def __init__(self, parent=None, scene=None):
         GungItem.__init__(self, parent=parent, scene=scene)
 
+        self._is_enabled = True
+
         self.properties['plug_width'] = 14.0
         self.properties['plug_height'] = 14.0
 
@@ -531,12 +575,18 @@ class GungPlug(GungItem):
 
     def accepts_drop(self, plug_out):
         result = False
+        if not self._is_enabled:
+            return False
         if plug_out.element_type in self.acceptsConnections.split(","):
             result = True
         return result
 
     def mousePressEvent(self, event):
         event.accept()
+
+        if not self.is_enabled():
+            return
+
         self.scene().init_dragging_edge(self.mapToScene(self.boundingRect().center()), self)
 
     def mouseMoveEvent(self, event):
@@ -612,6 +662,9 @@ class GungInPlug(GungPlug):
 
             :param event:
         """
+        if not self._is_enabled:
+            return
+
         if not self.edges:
             event.accept()
             self.scene().init_dragging_edge(self.mapToScene(self.boundingRect().center()), self)

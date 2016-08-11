@@ -131,7 +131,7 @@ class GungScene(QGraphicsScene):
         
     def mouseMoveEvent(self, event):
         """
-        Called whenever the mouse is moved inside the viewport and one of mouse buttons is pressed.
+        Called whenever the mouse is moved inside the viewport and ONE of mouse buttons is pressed.
         It's taking care of the rubber edge dragging etc.
 
             :param QtGui.QMouseEvent event:
