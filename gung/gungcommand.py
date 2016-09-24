@@ -1,4 +1,9 @@
-from PySide.QtGui import QUndoCommand
+
+try:
+    from PySide.QtGui import QUndoCommand
+except ImportError:
+    from PySide2.QtWidgets import QUndoCommand
+
 from gungnode import GungEdge
 from gungnode import GungGroup
 

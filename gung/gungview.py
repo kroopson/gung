@@ -1,5 +1,36 @@
-from PySide import QtGui, QtCore
-from PySide.QtCore import Signal
+try:
+    from PySide.QtGui import QGraphicsItem
+    from PySide.QtGui import QPen, QBrush, QColor
+    from PySide.QtGui import QPainter, QPainterPath
+    from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
+    from PySide.QtGui import QGraphicsView
+    from PySide.QtGui import QFont
+    from PySide.QtGui import QFontMetrics
+    from PySide.QtGui import QRubberBand
+    from PySide.QtGui import QTransform
+    from PySide.QtGui import QImage
+    from PySide.QtGui import QKeyEvent
+
+    from PySide.QtCore import QPoint, QPointF, QRect, QRectF, QSize
+    from PySide.QtCore import Signal, Slot
+except ImportError:
+    from PySide2.QtWidgets import QGraphicsItem, QUndoStack
+    from PySide2.QtWidgets import QGraphicsScene
+    from PySide2.QtWidgets import QGraphicsView
+    from PySide2.QtCore import QPoint, QPointF, QRect, QRectF, QSize
+    from PySide2.QtCore import Qt
+    from PySide2.QtCore import Signal, Slot
+    from PySide2.QtGui import QMouseEvent
+    from PySide2.QtGui import QKeyEvent
+    from PySide2.QtGui import QFont
+    from PySide2.QtGui import QFontMetrics
+    from PySide2.QtGui import QTransform
+    from PySide2.QtWidgets import QRubberBand
+    from PySide2.QtGui import QImage
+
+    from PySide2.QtGui import QPen, QBrush, QColor
+    from PySide2.QtGui import QPainter, QPainterPath
+
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 
@@ -7,7 +38,7 @@ QString = str  # <- this is to keep the compatibility between PySide and PyQt
 versionString = "GUNG v.0.2.1"
 
 
-class GungGraphicsView(QtGui.QGraphicsView):
+class GungGraphicsView(QGraphicsView):
     """
     GUNG graph viewport class. Handles view manipulation (move, zoom, select).
     """
@@ -17,26 +48,26 @@ class GungGraphicsView(QtGui.QGraphicsView):
     groupSignal = Signal()
 
     def __init__(self, parent=None):
-        QtGui.QGraphicsView.__init__(self, parent)
+        QGraphicsView.__init__(self, parent)
         self.prev_mouse_pos = None
         self.setSceneRect(-64000, -64000, 128000, 128000)
-        self.setTransformationAnchor(QtGui.QGraphicsView.NoAnchor)
-        self.setViewportUpdateMode(QtGui.QGraphicsView.FullViewportUpdate)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setTransformationAnchor(QGraphicsView.NoAnchor)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.current_scale = 1
         self.max_zoom = 3.0
         self.base_size = None
 
-        self.text_pen = QtGui.QPen(QtGui.QColor(128, 128, 128))
-        self.text_brush = QtGui.QBrush(QtGui.QColor(128, 128, 128))
-        self.font = QtGui.QFont("Impact", 18)
-        self.name_font = QtGui.QFont("Impact", 8)
+        self.text_pen = QPen(QColor(128, 128, 128))
+        self.text_brush = QBrush(QColor(128, 128, 128))
+        self.font = QFont("Impact", 18)
+        self.name_font = QFont("Impact", 8)
 
-        self.zoom_start = QtCore.QPoint()
-        self.zoom_start_transform = QtGui.QTransform()
+        self.zoom_start = QPoint()
+        self.zoom_start_transform = QTransform()
 
-        self.setFocusPolicy(QtCore.Qt.WheelFocus)
+        self.setFocusPolicy(Qt.WheelFocus)
 
         # =======================================================================
         # SELECTION OF NODES
@@ -44,33 +75,33 @@ class GungGraphicsView(QtGui.QGraphicsView):
         # If true the widget will add to the selection
         self.extend_selection = False
         self.remove_selection = False
-        self.selection_start = QtCore.QPoint()
-        self.rubber_band = QtGui.QRubberBand(QtGui.QRubberBand.Rectangle, self)
+        self.selection_start = QPoint()
+        self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
 
     def mousePressEvent(self, event):
         """
         Called whenever the mouse is pressed inside the view
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
         # --- If shift is pressed items will be added to selection
-        if event.modifiers() == QtCore.Qt.ShiftModifier:
+        if event.modifiers() == Qt.ShiftModifier:
             self.extend_selection = True
         else:
             self.extend_selection = False
 
         # --- If alt is pressed items will be removed from selection
-        if event.modifiers() == QtCore.Qt.AltModifier:
+        if event.modifiers() == Qt.AltModifier:
             self.remove_selection = True
         else:
             self.remove_selection = False
 
-        if event.button() == QtCore.Qt.MidButton:  # Start viewport translation
+        if event.button() == Qt.MidButton:  # Start viewport translation
             self.prev_mouse_pos = event.globalPos()
-        elif event.button() == QtCore.Qt.RightButton:  # Start viewport zoom
+        elif event.button() == Qt.RightButton:  # Start viewport zoom
             self.zoom_start = event.pos()
             self.zoom_start_transform = self.transform()
-        elif event.button() == QtCore.Qt.LeftButton:  # Left mouse pressed. Either select node or start rubber band drag
+        elif event.button() == Qt.LeftButton:  # Left mouse pressed. Either select node or start rubber band drag
             node = self.scene().get_node_at_point(self.mapToScene(event.pos()))
             if node:
                 if not self.extend_selection and not node.isSelected() and not self.remove_selection:
@@ -86,39 +117,39 @@ class GungGraphicsView(QtGui.QGraphicsView):
                     event.accept()
                     return
                 else:
-                    return QtGui.QGraphicsView.mousePressEvent(self, event)
+                    return QGraphicsView.mousePressEvent(self, event)
             else:
                 self.selection_start = event.pos()
-                self.rubber_band.setGeometry(QtCore.QRect(self.selection_start, self.selection_start))
+                self.rubber_band.setGeometry(QRect(self.selection_start, self.selection_start))
                 self.rubber_band.show()
                 event.accept()
         else:  # Unknown type of mouse button. Just skip it.
-            return QtGui.QGraphicsView.mousePressEvent(self, event)
+            return QGraphicsView.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
         """
         Called whenever the mouse is moved inside the viewport and ONE of mouse buttons is pressed.
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
-        if event.buttons() == QtCore.Qt.MidButton:  # Translate the viewport
+        if event.buttons() == Qt.MidButton:  # Translate the viewport
             if self.prev_mouse_pos:
                 current_mouse_pos = event.globalPos()
                 x = (current_mouse_pos - self.prev_mouse_pos).x()
                 y = (current_mouse_pos - self.prev_mouse_pos).y()
                 self.translate(x / self.current_scale, y / self.current_scale)
             self.prev_mouse_pos = event.globalPos()
-        elif event.buttons() == QtCore.Qt.RightButton:  # Zoom viewport
+        elif event.buttons() == Qt.RightButton:  # Zoom viewport
             if event.pos().x() > self.zoom_start.x():
                 scale_value = 1 + abs((event.x() - self.zoom_start.x()) / 100.0)
                 self.zoom(scale_value)
             elif event.pos().x() < self.zoom_start.x():
                 scale_value = 1.0 / (1 + (abs((event.x() - self.zoom_start.x())) / 100.0))
                 self.zoom(scale_value)
-        elif event.buttons() == QtCore.Qt.LeftButton:  # Drag selection rubber band
+        elif event.buttons() == Qt.LeftButton:  # Drag selection rubber band
             if self.rubber_band.isHidden():
-                return QtGui.QGraphicsView.mouseMoveEvent(self, event)
-            selection_rect = QtCore.QRect()
+                return QGraphicsView.mouseMoveEvent(self, event)
+            selection_rect = QRect()
             point = event.pos()
             selection_rect.setX(point.x() if point.x() < self.selection_start.x() else self.selection_start.x())
             selection_rect.setY(point.y() if point.y() < self.selection_start.y() else self.selection_start.y())
@@ -128,21 +159,21 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.rubber_band.setGeometry(selection_rect)
             event.accept()
         else:  # Unknown type of mouse button. Just skip it.
-            return QtGui.QGraphicsView.mouseMoveEvent(self, event)
+            return QGraphicsView.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         """
         Called whenever the mouse button is released after it's been clicked inside viewport.
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
-        if event.button() == QtCore.Qt.LeftButton:
+        if event.button() == Qt.LeftButton:
             if not self.rubber_band.isHidden():
                 # --- selection of items with rubber band is handled here
                 select = True
-                if event.modifiers() == QtCore.Qt.ShiftModifier:
+                if event.modifiers() == Qt.ShiftModifier:
                     self.extend_selection = True
-                elif event.modifiers() == QtCore.Qt.AltModifier:
+                elif event.modifiers() == Qt.AltModifier:
                     self.extend_selection = True
                     select = False
                 else:
@@ -157,13 +188,13 @@ class GungGraphicsView(QtGui.QGraphicsView):
                     else:
                         item.setSelected(False)
         self.rubber_band.hide()
-        QtGui.QGraphicsView.mouseReleaseEvent(self, event)
+        QGraphicsView.mouseReleaseEvent(self, event)
 
     def select_items_in_rubber_band(self, rect, append=True, select=True):
         """
         Iterates all the items that collides with selection rubber band and selects them if they are selectable.
 
-            :param QtCore.QRect rect: selection rectangle (this is the rubber band geometry)
+            :param QRect rect: selection rectangle (this is the rubber band geometry)
             :param bool append: if set to True an old selection will be preserved.
             :param select: if set to False those items will be unselected.
         """
@@ -172,14 +203,15 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.scene().clearSelection()
         scene_top_left = self.mapToScene(rect.topLeft())
         scene_bottom_right = self.mapToScene(rect.bottomRight())
-        items = self.scene().items(QtCore.QRectF(scene_top_left, scene_bottom_right),
-                                   QtCore.Qt.IntersectsItemBoundingRect)
+        items = self.scene().items(QRectF(scene_top_left, scene_bottom_right),
+                                   Qt.IntersectsItemBoundingRect)
         for item in items:
-            if (item.flags() & QtGui.QGraphicsItem.ItemIsSelectable) == QtGui.QGraphicsItem.ItemIsSelectable:
+            if (item.flags() & QGraphicsItem.ItemIsSelectable) == QGraphicsItem.ItemIsSelectable:
                 item.setSelected(select)
                 modified = True
         if modified:
-            self.scene().emit(QtCore.SIGNAL("selectionChanged()"))
+            self.scene().selectionChanged.emit()
+            # self.scene().emit(SIGNAL("selectionChanged()"))
 
     def zoom(self, scale_value):
         """
@@ -196,13 +228,13 @@ class GungGraphicsView(QtGui.QGraphicsView):
         current_transform = self.zoom_start_transform  # Get the current transform for calculations
 
         # Zoom start is a zoom focus point. The scene will be zooming in or out against this point
-        translate_matrix = QtGui.QTransform.fromTranslate(self.zoom_start.x(), self.zoom_start.y())
+        translate_matrix = QTransform.fromTranslate(self.zoom_start.x(), self.zoom_start.y())
         inv_translate_matrix = translate_matrix.inverted()
         # This is current transform translated so that the zoom start point is in 0, 0
         local_current_transform = current_transform * inv_translate_matrix[0]
 
         # noinspection PyCallByClass,PyTypeChecker
-        scale_matrix = QtGui.QTransform.fromScale(scale_value, scale_value)
+        scale_matrix = QTransform.fromScale(scale_value, scale_value)
 
         scaled_transform = local_current_transform * scale_matrix * translate_matrix
 
@@ -211,7 +243,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         if scaled_transform_scale > self.max_zoom:
             keep_scale_value = self.max_zoom / scaled_transform_scale
             # noinspection PyCallByClass,PyTypeChecker
-            scale_matrix = scale_matrix * QtGui.QTransform.fromScale(keep_scale_value, keep_scale_value)
+            scale_matrix = scale_matrix * QTransform.fromScale(keep_scale_value, keep_scale_value)
             scaled_transform = local_current_transform * scale_matrix * translate_matrix
 
         # set the final transform and keep the current scale in a variable
@@ -225,8 +257,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
             :rtype: float
         """
         matrix = self.transform()
-        map_point_zero = QtCore.QPointF(0.0, 0.0)
-        map_point_one = QtCore.QPointF(1.0, 0.0)
+        map_point_zero = QPointF(0.0, 0.0)
+        map_point_one = QPointF(1.0, 0.0)
 
         mapped_point_zero = matrix.map(map_point_zero)
         mapped_point_one = matrix.map(map_point_one)
@@ -240,8 +272,8 @@ class GungGraphicsView(QtGui.QGraphicsView):
             :param matrix:
             :rtype: float
         """
-        map_point_zero = QtCore.QPointF(0.0, 0.0)
-        map_point_one = QtCore.QPointF(1.0, 0.0)
+        map_point_zero = QPointF(0.0, 0.0)
+        map_point_one = QPointF(1.0, 0.0)
 
         mapped_point_zero = matrix.map(map_point_zero)
         mapped_point_one = matrix.map(map_point_one)
@@ -251,7 +283,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
         """
         Called when user uses the mouse wheel inside the viewport.
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
         delta = event.delta()
         self.zoom_start_transform = self.transform()
@@ -286,7 +318,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.scale(scale_value, scale_value)
 
         self.get_current_scale()
-        return QtGui.QGraphicsView.resizeEvent(self, event)
+        return QGraphicsView.resizeEvent(self, event)
 
     def setBaseSize(self):
         """
@@ -298,15 +330,15 @@ class GungGraphicsView(QtGui.QGraphicsView):
         Overrides default fitInView method to keep the maximum zoom value (we want to prevent from zooming too much)
 
             :param rect: Rectangle to fit in the view
-            :type rect: QtCore.QRectF
+            :type rect: QRectF
             :param keep_aspect_ratio: not used.
             :return: None
         """
 
-        self.setTransform(QtGui.QTransform())  # Start from identity transform
+        self.setTransform(QTransform())  # Start from identity transform
 
         top_left_offset = self.mapToScene(0, 0)  # This will put the 0,0 point of scene in 0,0 point of view
-        top_left_transform = QtGui.QTransform.fromTranslate(top_left_offset.x(), top_left_offset.y())
+        top_left_transform = QTransform.fromTranslate(top_left_offset.x(), top_left_offset.y())
 
         current_window_size = self.size()
 
@@ -315,19 +347,19 @@ class GungGraphicsView(QtGui.QGraphicsView):
             scale_value = min(self.height() / float(rect.height()), self.max_zoom)
         else:
             scale_value = min(self.width() / float(rect.width()), self.max_zoom)
-        scale_matrix = QtGui.QTransform.fromScale(scale_value, scale_value)
+        scale_matrix = QTransform.fromScale(scale_value, scale_value)
         scaled = scale_matrix * top_left_transform
         self.setTransform(scaled)
 
         # This point will be placed in a center of the view
         fit_center = rect.center()
-        fit_center_scaled = scaled.map(QtCore.QPoint(fit_center.x(), fit_center.y()))  # scale matrix changed this
-        fit_center_matrix = QtGui.QTransform.fromTranslate(fit_center_scaled.x(), fit_center_scaled.y())
+        fit_center_scaled = scaled.map(QPoint(fit_center.x(), fit_center.y()))  # scale matrix changed this
+        fit_center_matrix = QTransform.fromTranslate(fit_center_scaled.x(), fit_center_scaled.y())
 
         # Get the center of the viewport, add a top_left_offset to it to keep everything consistent
-        translated_center = QtCore.QPointF(current_window_size.width() / 2.0, current_window_size.height() / 2.0)
+        translated_center = QPointF(current_window_size.width() / 2.0, current_window_size.height() / 2.0)
         to_center_offset = translated_center + top_left_offset
-        to_screen_center_transform = QtGui.QTransform.fromTranslate(to_center_offset.x(), to_center_offset.y())
+        to_screen_center_transform = QTransform.fromTranslate(to_center_offset.x(), to_center_offset.y())
 
         # Set the final transform
         self.setTransform(scaled * fit_center_matrix.inverted()[0] * to_screen_center_transform)
@@ -340,14 +372,14 @@ class GungGraphicsView(QtGui.QGraphicsView):
         """
         sel_items = self.scene().selectedItems()
         if len(sel_items) > 0:
-            zoom_rect = QtCore.QRectF()
+            zoom_rect = QRectF()
             for item in sel_items:
                 if not isinstance(item, GungNode):
                     continue
                 item_rect = item.boundingRect()
                 zoom_rect = zoom_rect.united(item_rect.translated(item.x(), item.y()))
 
-            self.fitInView(zoom_rect, QtCore.Qt.KeepAspectRatio)
+            self.fitInView(zoom_rect, Qt.KeepAspectRatio)
             self.get_current_scale()
 
     def zoom_to_all(self):
@@ -360,10 +392,10 @@ class GungGraphicsView(QtGui.QGraphicsView):
             for item in all_nodes[1:]:
                 item_rect = item.boundingRect()
                 zoom_rect = zoom_rect.united(item_rect.translated(item.x(), item.y()))
-            self.fitInView(zoom_rect, QtCore.Qt.KeepAspectRatio)
+            self.fitInView(zoom_rect, Qt.KeepAspectRatio)
             self.get_current_scale()
         else:
-            self.setTransform(QtGui.QTransform())
+            self.setTransform(QTransform())
 
     def get_nodes(self):
         """
@@ -384,31 +416,31 @@ class GungGraphicsView(QtGui.QGraphicsView):
         """
         Called whenever a keyboard button is pressed and the viewport has a keyboard focus
 
-            :param QtGui.QKeyEvent event:
+            :param QKeyEvent event:
         """
-        if event.key() == QtCore.Qt.Key_F:
+        if event.key() == Qt.Key_F:
             self.zoom_to_selected()
             event.accept()
-        elif event.key() == QtCore.Qt.Key_A:
+        elif event.key() == Qt.Key_A:
             self.zoom_to_all()
             event.accept()
-        elif event.key() == QtCore.Qt.Key_Z and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == Qt.Key_Z and event.modifiers() == Qt.ControlModifier:
             self.undoSignal.emit()
-        elif event.key() == QtCore.Qt.Key_Y and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == Qt.Key_Y and event.modifiers() == Qt.ControlModifier:
             self.redoSignal.emit()
-        elif event.key() == QtCore.Qt.Key_Delete:
+        elif event.key() == Qt.Key_Delete:
             self.deleteSignal.emit()
-        elif event.key() == QtCore.Qt.Key_G and event.modifiers() == QtCore.Qt.ControlModifier:
+        elif event.key() == Qt.Key_G and event.modifiers() == Qt.ControlModifier:
             self.groupSignal.emit()
         else:
-            return QtGui.QGraphicsView.keyPressEvent(self, event)
+            return QGraphicsView.keyPressEvent(self, event)
 
     def drawBackground(self, painter, rect):
         """
         Called whenever the background re-paint is required. Override this in your child classes to have a custom graph
         look.
-            :param QtGui.QPainter painter:
-            :param QtCore.QRect rect:
+            :param QPainter painter:
+            :param QRect rect:
         """
         painter.setFont(self.font)
         painter.setPen(self.text_pen)
@@ -417,11 +449,11 @@ class GungGraphicsView(QtGui.QGraphicsView):
         painter.drawLine(0, 0, 0, 100)
         painter.setWorldMatrixEnabled(False)
 
-        image = QtGui.QImage()
+        image = QImage()
 
         w = image.size().width()
         h = image.size().height()
-        r = QtCore.QRect(1, self.height() - h - 5, w, h)
+        r = QRect(1, self.height() - h - 5, w, h)
         painter.drawImage(r, image)
 
         painter.drawLine(self.width() / 2, 0, self.width() / 2, self.height())
@@ -429,7 +461,7 @@ class GungGraphicsView(QtGui.QGraphicsView):
 
         painter.drawText(w + 2, self.height() - 6, QString(versionString))
 
-        return QtGui.QGraphicsView.drawBackground(self, painter, rect)
+        return QGraphicsView.drawBackground(self, painter, rect)
 
     def setScene(self, scene):
         """
@@ -444,4 +476,4 @@ class GungGraphicsView(QtGui.QGraphicsView):
             self.redoSignal.connect(scene.redo_called)
             self.deleteSignal.connect(scene.delete_called)
             self.groupSignal.connect(scene.create_group_called)
-        return QtGui.QGraphicsView.setScene(self, scene)
+        return QGraphicsView.setScene(self, scene)

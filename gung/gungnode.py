@@ -1,6 +1,17 @@
-import PySide.QtCore as QtCore
-import PySide.QtGui as QtGui
-from PySide.QtCore import QPoint
+try:
+    from PySide.QtGui import QGraphicsItem
+    from PySide.QtGui import QPen, QBrush, QColor
+    from PySide.QtGui import QPainter, QPainterPath
+
+    from PySide.QtCore import QPoint, QPointF, QRectF, QSize
+except ImportError:
+    from PySide2.QtWidgets import QGraphicsItem
+    from PySide2.QtCore import QPoint, QPointF, QRectF, QSize
+    from PySide2.QtCore import Qt
+
+    from PySide2.QtGui import QPen, QBrush, QColor
+    from PySide2.QtGui import QPainter, QPainterPath
+    
 from xml.dom import Node
 import inspect
 import sys
@@ -18,33 +29,35 @@ def get_gung_node_classes():
     return gung_classes
 
 
-class GungNodeResizer(QtGui.QGraphicsItem):
+class GungNodeResizer(QGraphicsItem):
     """
     A small widget displayed in a bottom right corner of the node. When it is moved
     it will resize the parent GungNode.
     """
 
     def __init__(self, parent=None, scene=None):
-        QtGui.QGraphicsItem.__init__(self, parent=parent, scene=scene)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable)
-        self.storedPos = QtCore.QPointF()
+        QGraphicsItem.__init__(self, parent)
+        if scene:
+            scene.addItem(self)
+        self.setFlag(QGraphicsItem.ItemIsMovable)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.storedPos = QPointF()
 
         self.itemWidth = config.getfloat("Resizer", "Width")
         self.itemHeight = config.getfloat("Resizer", "Height")
 
-        self.pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
-        self.brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
-        self.disabledPen = QtGui.QPen(QtGui.QColor(40, 40, 40))
-        self.disabled_brush = QtGui.QBrush(QtGui.QColor(50, 50, 50))
+        self.pen = QPen(QColor(0, 0, 0))
+        self.brush = QBrush(QColor(50, 50, 50))
+        self.disabledPen = QPen(QColor(40, 40, 40))
+        self.disabled_brush = QBrush(QColor(50, 50, 50))
 
         self.sizePoint = QPoint(self.itemWidth, self.itemHeight)
 
     def mousePressEvent(self, *args, **kwargs):
-        self.setCursor(QtCore.Qt.SizeFDiagCursor)
+        self.setCursor(Qt.SizeFDiagCursor)
         self.storedPos = self.pos()
-        return QtGui.QGraphicsItem.mousePressEvent(self, *args, **kwargs)
+        return QGraphicsItem.mousePressEvent(self, *args, **kwargs)
 
     def mouseReleaseEvent(self, *args, **kwargs):
         self.unsetCursor()
@@ -54,25 +67,25 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             # --- This allows undo/redo of this command.
             self.scene().resize_node(self.parentItem().properties['node_id'], p,
                                      self.storedPos)
-        return QtGui.QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
+        return QGraphicsItem.mouseReleaseEvent(self, *args, **kwargs)
 
     def paint(self, painter, option, widget=None):
         """
         Override of a paint class from QGraphicsItem.
         Implement this to give a resizer the desired look.
 
-            :param QtGui.QPainter painter:
+            :param QPainter painter:
             :param option:
             :param widget:
         """
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing)
         # draw body of a node
         if self.parentItem().isSelected():
             painter.setPen(self.parentItem().selectedPen)
         else:
             painter.setPen(self.parentItem().unselectedPen)
 
-        if self.flags() & QtGui.QGraphicsItem.ItemIsMovable:
+        if self.flags() & QGraphicsItem.ItemIsMovable:
             painter.setBrush(self.brush)
         else:
             painter.setPen(self.disabledPen)
@@ -81,10 +94,10 @@ class GungNodeResizer(QtGui.QGraphicsItem):
         painter.drawPolygon([QPoint(0, 0),
                              QPoint(-self.itemWidth, 0),
                              QPoint(0, -self.itemHeight)],
-                            QtCore.Qt.OddEvenFill)
+                            Qt.OddEvenFill)
 
     def boundingRect(self):
-        return QtCore.QRectF(-self.itemWidth, -self.itemHeight, self.itemWidth, self.itemHeight)
+        return QRectF(-self.itemWidth, -self.itemHeight, self.itemWidth, self.itemHeight)
 
     def itemChange(self, change, value):
         """
@@ -96,7 +109,7 @@ class GungNodeResizer(QtGui.QGraphicsItem):
             :param value: defines a value of a change
             :return: QVariant
         """
-        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+        if change == QGraphicsItem.ItemPositionHasChanged:
             parent_min_width = self.parentItem().properties['min_width']
             parent_min_height = self.parentItem().properties['min_height']
 
@@ -109,13 +122,13 @@ class GungNodeResizer(QtGui.QGraphicsItem):
                 self.setY(parent_min_height)
             self.parentItem().set_size(self.pos())
 
-        return QtGui.QGraphicsItem.itemChange(self, change, value)
+        return QGraphicsItem.itemChange(self, change, value)
 
 
 items = []
 
 
-class GungItem(QtGui.QGraphicsItem):
+class GungItem(QGraphicsItem):
     """
     Base class for all GUNG scene items. Inside the constructor it will try to obtain the unique id for this item
     that will be used later in every important operation (especially during the connection of the plugs, undo/redo,
@@ -124,8 +137,8 @@ class GungItem(QtGui.QGraphicsItem):
     element_type = "GungNode"
 
     def __init__(self, parent=None, scene=None, node_id=None):
-        QtGui.QGraphicsItem.__init__(self, parent, scene)
-
+        QGraphicsItem.__init__(self, parent)
+        scene.addItem(self)
         # self.self_target = self  # This keeps the reference to the object so it
         # won't get collected by garbage collector
         # later on: How idiotic this was...
@@ -218,7 +231,7 @@ class GungItem(QtGui.QGraphicsItem):
         except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
             print "Failed to get the color option", section, option
             r, g, b = (0, 0, 0,)
-        return QtGui.QColor(r, g, b, )
+        return QColor(r, g, b, )
 
     def itemChange(self, change, value):
         """
@@ -230,16 +243,16 @@ class GungItem(QtGui.QGraphicsItem):
             :param value: defines a value of a change
             :return: QVariant
         """
-        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+        if change == QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
             if isinstance(self.parent_, GungGroup):
                 self.parent_.update_bounding_rect()
 
-        return QtGui.QGraphicsItem.itemChange(self, change, value)
+        return QGraphicsItem.itemChange(self, change, value)
 
     def setParentItem(self, parent_item):
         self.parent_ = parent_item
-        QtGui.QGraphicsItem.setParentItem(self, parent_item)
+        QGraphicsItem.setParentItem(self, parent_item)
 
 
 class GungNode(GungItem):
@@ -266,21 +279,21 @@ class GungNode(GungItem):
         self.bboxH = config.getfloat("Node", "MinimalHeight")
 
         self.nodeColor = self.get_color_config("Node", "NodeColor")
-        self.lightGrayBrush = QtGui.QBrush(self.nodeColor)
-        self.darkGrayBrush = QtGui.QBrush(QtCore.Qt.darkGray)
+        self.lightGrayBrush = QBrush(self.nodeColor)
+        self.darkGrayBrush = QBrush(Qt.darkGray)
 
-        self.selectedPen = QtGui.QPen(self.get_color_config("Node", "SelectedEdgeColor"))
-        self.disabledPen = QtGui.QPen(QtGui.QColor(40, 40, 40))
-        self.unselectedPen = QtGui.QPen(self.get_color_config("Node", "UnSelectedEdgeColor"))
-        self.textPen = QtGui.QPen(self.get_color_config("Node", "TextColor"))
+        self.selectedPen = QPen(self.get_color_config("Node", "SelectedEdgeColor"))
+        self.disabledPen = QPen(QColor(40, 40, 40))
+        self.unselectedPen = QPen(self.get_color_config("Node", "UnSelectedEdgeColor"))
+        self.textPen = QPen(self.get_color_config("Node", "TextColor"))
 
-        # self.node_font = QtGui.QFont("Arial", 7)
+        # self.node_font = QFont("Arial", 7)
 
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemClipsToShape, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemClipsToShape, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
 
         self.draggingNode = None
 
@@ -345,17 +358,17 @@ class GungNode(GungItem):
 
     def mousePressEvent(self, event):
         """
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
         self.scene().topZ += .0001
         self.setZValue(self.scene().topZ)
-        return QtGui.QGraphicsItem.mousePressEvent(self, event)
+        return QGraphicsItem.mousePressEvent(self, event)
 
     def mouseDoubleClickEvent(self, event):
         """
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
-        return QtGui.QGraphicsItem.mousePressEvent(self, event)
+        return QGraphicsItem.mousePressEvent(self, event)
 
     def from_xml(self, xmlnode):
         GungItem.from_xml(self, xmlnode)
@@ -368,7 +381,7 @@ class GungNode(GungItem):
         of all attributes. This is needed if you want to have plugs "sticked" to the right edge
         of this node.
 
-            :param QtGui.QSize size:
+            :param QSize size:
         """
         size_x = size.x() if size.x() >= self.properties['min_width'] else self.properties['min_width']
         self.properties['node_width'] = size_x
@@ -383,28 +396,28 @@ class GungNode(GungItem):
 
     def set_enabled(self, state):
         super(GungNode, self).set_enabled(state)
-        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsMovable, state)
-        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, state)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, state)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, state)
+        self.resizer.setFlag(QGraphicsItem.ItemIsMovable, state)
+        self.resizer.setFlag(QGraphicsItem.ItemIsSelectable, state)
+        self.setFlag(QGraphicsItem.ItemIsMovable, state)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, state)
 
     def set_disabled(self, state):
         super(GungNode, self).set_disabled(state)
-        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsMovable, not state)
-        self.resizer.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, not state)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, not state)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, not state)
+        self.resizer.setFlag(QGraphicsItem.ItemIsMovable, not state)
+        self.resizer.setFlag(QGraphicsItem.ItemIsSelectable, not state)
+        self.setFlag(QGraphicsItem.ItemIsMovable, not state)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, not state)
 
     def paint(self, painter, option, widget=None):
         """
         Override of QGraphicsItem.paint method. Implement this in your child classes to
         make nodes with the look you want.
 
-            :param QtGui.QPainter painter:
+            :param QPainter painter:
             :param option:
             :param widget:
         """
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing)
 
         # --- Distinguish the selected nodes from the unselected ones.
         if self.isSelected():
@@ -420,7 +433,7 @@ class GungNode(GungItem):
         painter.drawText(5, 15, self.properties['name'])
 
     def boundingRect(self):
-        return QtCore.QRectF(0, 0, self.bboxW, self.bboxH)
+        return QRectF(0, 0, self.bboxW, self.bboxH)
 
     def itemChange(self, change, value):
         """
@@ -432,7 +445,7 @@ class GungNode(GungItem):
             :param value: defines a value of a change
             :rtype: QVariant
         """
-        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+        if change == QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
             self.scene().nodesHaveMoved = True
 
@@ -546,7 +559,7 @@ class GungAttribute(GungItem):
         Override this in child classes.
         """
 
-        return QtCore.QRectF(0, 0, self.parentItem().properties['node_width'], self.properties['attr_height'])
+        return QRectF(0, 0, self.parentItem().properties['node_width'], self.properties['attr_height'])
 
 
 class GungPlug(GungItem):
@@ -563,15 +576,15 @@ class GungPlug(GungItem):
 
         self.isHighlighted = False
 
-        plug_color = QtGui.QColor(150, 255, 150)
+        plug_color = QColor(150, 255, 150)
 
-        self.plugPen = QtGui.QPen(plug_color.lighter())
-        self.plugBrush = QtGui.QBrush(plug_color)
-        self.highlightedPlugBrush = QtGui.QBrush(plug_color.lighter())
+        self.plugPen = QPen(plug_color.lighter())
+        self.plugBrush = QBrush(plug_color)
+        self.highlightedPlugBrush = QBrush(plug_color.lighter())
 
         self.edges = []
 
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges)
 
     def accepts_drop(self, plug_out):
         result = False
@@ -600,7 +613,7 @@ class GungPlug(GungItem):
         """
         Override this method to give your plugs a custom look.
 
-            :param QtGui.QPainter painter:
+            :param QPainter painter:
             :param option:
             :param widget:
         """
@@ -618,7 +631,7 @@ class GungPlug(GungItem):
         self.update()
 
     def boundingRect(self, *args, **kwargs):
-        return QtCore.QRectF(0, 0, self.properties['plug_width'], self.properties['plug_height'])
+        return QRectF(0, 0, self.properties['plug_width'], self.properties['plug_height'])
 
     def itemChange(self, change, value):
         """
@@ -631,7 +644,7 @@ class GungPlug(GungItem):
             :return: QVariant
         """
 
-        if change == QtGui.QGraphicsItem.ItemScenePositionHasChanged:
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
             for edge in self.edges:
                 if edge is None:
                     continue
@@ -642,7 +655,7 @@ class GungPlug(GungItem):
                     edge.prepareGeometryChange()
                     edge.set_from_pos(self.mapToScene(self.boundingRect().center()))
 
-        return QtGui.QGraphicsItem.itemChange(self, change, value)
+        return QGraphicsItem.itemChange(self, change, value)
 
 
 class GungInPlug(GungPlug):
@@ -699,20 +712,20 @@ class GungGroup(GungItem):
         Base class to inherit if you want to create your own groups.
         """
         GungItem.__init__(self, parent, scene)
-        self.rect = QtCore.QRectF()
+        self.rect = QRectF()
 
         self.group_color = self.get_color_config("Group", "GroupBackground")
-        self.group_brush = QtGui.QBrush(self.group_color)
+        self.group_brush = QBrush(self.group_color)
 
         try:
             self.offset = config.getfloat("Group", "GroupOffset")
         except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
             self.offset = 10
 
-        self.setFlag(QtGui.QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.setFlag(QtGui.QGraphicsItem.ItemSendsScenePositionChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, True)
 
         # TODO: Double check if this is even needed.
         self._node_id = node_id
@@ -731,13 +744,13 @@ class GungGroup(GungItem):
             r.translate(item.pos())
             r.adjust(-self.offset, -self.offset, self.offset, self.offset)
             if rect is None:
-                rect = QtCore.QRectF(r)
+                rect = QRectF(r)
                 continue
             rect = rect.united(r)
         if rect is None:
-            self.rect = QtCore.QRectF()
+            self.rect = QRectF()
         else:
-            self.rect = QtCore.QRectF(rect)
+            self.rect = QRectF(rect)
         self.update()
 
     def paint(self, painter, option, widget=None):
@@ -750,7 +763,7 @@ class GungGroup(GungItem):
     def mousePressEvent(self, event):
         self.scene().topZ += .0001
         self.setZValue(self.scene().topZ)
-        return QtGui.QGraphicsItem.mousePressEvent(self, event)
+        return QGraphicsItem.mousePressEvent(self, event)
 
     def itemChange(self, change, value):
         """
@@ -762,7 +775,7 @@ class GungGroup(GungItem):
             :param value: defines a value of a change
             :rtype: QVariant
         """
-        if change == QtGui.QGraphicsItem.ItemPositionHasChanged:
+        if change == QGraphicsItem.ItemPositionHasChanged:
             # --- inform the scene that this item has moved.
             self.scene().nodesHaveMoved = True
 
@@ -791,14 +804,14 @@ class GungEdge(GungItem):
             self.from_pos = item_from.mapToScene(item_from.boundingRect().center())
             self.to_pos = item_to.mapToScene(item_to.boundingRect().center())
         else:
-            self.from_pos = QtCore.QPointF()
-            self.to_pos = QtCore.QPointF()
+            self.from_pos = QPointF()
+            self.to_pos = QPointF()
 
-        self.edge_pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.edge_pen = QPen(QColor(0, 0, 0))
         self.setZValue(self.scene().topEdgeZ)
         self.scene().topEdgeZ += .0001
 
-        self.bounding_rect = QtCore.QRectF()
+        self.bounding_rect = QRectF()
 
         self._parent = parent
 
@@ -814,7 +827,7 @@ class GungEdge(GungItem):
             if self.item_to is not None:
                 self.item_to.edges.append(self)
                 self.set_to_pos(self.item_to.mapToScene(self.item_to.boundingRect().center()))
-        self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
+        self.setFlag(QGraphicsItem.ItemHasNoContents, False)
 
     def disconnect_edge(self):
         # TODO: Make it more loose coupled. Now it's a field for errors.
@@ -822,42 +835,42 @@ class GungEdge(GungItem):
             self.item_from.edges.remove(self)
         while self in self.item_to.edges:
             self.item_to.edges.remove(self)
-        self.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
+        self.setFlag(QGraphicsItem.ItemHasNoContents, True)
 
     def paint(self, painter, option, widget=None):
         if self.item_from is None or self.item_to is None:
             return
         painter.setPen(self.edge_pen)
-        pos_start = self.item_from.mapToScene(QtCore.QPointF()) + self.item_from.boundingRect().center()
-        pos_end = self.item_to.mapToScene(QtCore.QPointF()) + self.item_to.boundingRect().center()
+        pos_start = self.item_from.mapToScene(QPointF()) + self.item_from.boundingRect().center()
+        pos_end = self.item_to.mapToScene(QPointF()) + self.item_to.boundingRect().center()
 
-        knot_a = QtCore.QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_start.y())
-        knot_b = QtCore.QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_end.y())
-        path = QtGui.QPainterPath()
+        knot_a = QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_start.y())
+        knot_b = QPointF((pos_start.x() + pos_end.x()) / 2.0, pos_end.y())
+        path = QPainterPath()
         path.moveTo(pos_start)
         path.cubicTo(knot_a, knot_b, pos_end)
         painter.drawPath(path)
 
     def set_from_pos(self, point_from):
-        self.from_pos = QtCore.QPointF(point_from)
+        self.from_pos = QPointF(point_from)
 
         top_left_x = min(float(self.from_pos.x()), float(self.to_pos.x()))
         top_left_y = min(float(self.from_pos.y()), float(self.to_pos.y()))
 
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
-        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
+        self.bounding_rect = QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
                                            bottom_right_y - top_left_y)
 
     def set_to_pos(self, point_to):
-        self.to_pos = QtCore.QPointF(point_to)
+        self.to_pos = QPointF(point_to)
 
         top_left_x = min(float(self.from_pos.x()), float(self.to_pos.x()))
         top_left_y = min(float(self.from_pos.y()), float(self.to_pos.y()))
 
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
-        self.bounding_rect = QtCore.QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
+        self.bounding_rect = QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
                                            bottom_right_y - top_left_y)
 
     def boundingRect(self, *args, **kwargs):

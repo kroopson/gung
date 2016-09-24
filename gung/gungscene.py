@@ -1,6 +1,21 @@
-from PySide import QtGui, QtCore
-from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
-from PySide.QtCore import Signal, Slot, QPointF, QRectF
+try:
+    from PySide.QtGui import QGraphicsItem
+    from PySide.QtGui import QPen, QBrush, QColor
+    from PySide.QtGui import QPainter, QPainterPath
+    from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
+
+    from PySide.QtCore import QPoint, QPointF, QRectF, QSize
+    from PySide.QtCore import Signal, Slot
+except ImportError:
+    from PySide2.QtWidgets import QGraphicsItem, QUndoStack
+    from PySide2.QtWidgets import QGraphicsScene
+    from PySide2.QtCore import QPoint, QPointF, QRectF, QSize
+    from PySide2.QtCore import Qt
+    from PySide2.QtCore import Signal, Slot
+    from PySide2.QtGui import QMouseEvent
+
+    from PySide2.QtGui import QPen, QBrush, QColor
+    from PySide2.QtGui import QPainter, QPainterPath
 
 from gungcommand import GungCreateGroupCommand, GungCreateEdgeCommand, GungDeleteItemsCommand, GungMoveCommand, \
     GungDeleteEdgeCommand
@@ -20,7 +35,8 @@ class GungScene(QGraphicsScene):
         self.topEdgeZ = 1.0000
         self.isDragging = False
         self.dragFrom = None
-        self.draggingEdge = GungDragEdge(scene=self)
+        self.draggingEdge = GungDragEdge()
+        self.addItem(self.draggingEdge)
         self.nodesHaveMoved = False
         self.undoStack = QUndoStack(self)
         
@@ -125,20 +141,20 @@ class GungScene(QGraphicsScene):
         self.draggingEdge.post_start = drag_start
         self.draggingEdge.pos_end = drag_start
         self.dragFrom = drag_end
-        self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, False)
+        self.draggingEdge.setFlag(QGraphicsItem.ItemHasNoContents, False)
         self.draggingEdge.update()
-        self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
+        self.parent().setCursor(Qt.ClosedHandCursor)
         
     def mouseMoveEvent(self, event):
         """
         Called whenever the mouse is moved inside the viewport and ONE of mouse buttons is pressed.
         It's taking care of the rubber edge dragging etc.
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
-        if event.buttons() == QtCore.Qt.MidButton:
+        if event.buttons() == Qt.MidButton:
             return QGraphicsScene.mouseMoveEvent(self, event)
-        if event.buttons() == QtCore.Qt.RightButton:
+        if event.buttons() == Qt.RightButton:
             return QGraphicsScene.mouseMoveEvent(self, event)
 
         highlighted_plug = None
@@ -153,9 +169,9 @@ class GungScene(QGraphicsScene):
                     highlighted_plug = plug
                     self.highlighted_plugs.append(plug)
                 else:
-                    self.parent().setCursor(QtCore.Qt.ForbiddenCursor)
+                    self.parent().setCursor(Qt.ForbiddenCursor)
             else:
-                self.parent().setCursor(QtCore.Qt.ClosedHandCursor)
+                self.parent().setCursor(Qt.ClosedHandCursor)
         else:
             self.parent().unsetCursor()
 
@@ -174,7 +190,7 @@ class GungScene(QGraphicsScene):
         """
         Called whenever the mouse button is released after it's been clicked inside viewport.
 
-            :param QtGui.QMouseEvent event:
+            :param QMouseEvent event:
         """
         if self.nodesHaveMoved:
             self.check_if_nodes_moved()
@@ -331,7 +347,7 @@ class GungScene(QGraphicsScene):
         self.isDragging = False
         self.draggingEdge.post_start = None
         self.draggingEdge.pos_end = None
-        self.draggingEdge.setFlag(QtGui.QGraphicsItem.ItemHasNoContents, True)
+        self.draggingEdge.setFlag(QGraphicsItem.ItemHasNoContents, True)
         self.draggingEdge.update()
         self.update()
         self.parent().unsetCursor()
@@ -412,10 +428,10 @@ class GungDragEdge(QGraphicsItem):
     Graphics item that is responsible for displaying the rubber band edge (used to visually
     create connections).
     """
-    def __init__(self, scene=None):
-        QGraphicsItem.__init__(self, None, scene)
+    def __init__(self):
+        QGraphicsItem.__init__(self)
 
-        self.edge_pen = QtGui.QPen(QtGui.QColor(0, 0, 0))
+        self.edge_pen = QPen(QColor(0, 0, 0))
         self.setZValue(2.000)
 
         self.post_start = None

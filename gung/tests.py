@@ -1,7 +1,12 @@
 import unittest
-
-from PySide import QtGui
-from PySide.QtGui import QApplication
+try:
+    from PySide.QtGui import QWidget
+    from PySide.QtGui import QVBoxLayout
+    from PySide.QtGui import QApplication
+except ImportError:
+    from PySide2.QtWidgets import QApplication
+    from PySide2.QtWidgets import QWidget
+    from PySide2.QtWidgets import QVBoxLayout
 
 from gung.gungview import GungGraphicsView
 from gung.gungscene import GungScene
@@ -13,9 +18,9 @@ class TestSequenceFunctions(unittest.TestCase):
 
     def setUp(self):
         
-        self.w = QtGui.QWidget()
+        self.w = QWidget()
     
-        wlyt = QtGui.QVBoxLayout()
+        wlyt = QVBoxLayout()
         self.w.setLayout(wlyt)
         
         self.view = GungGraphicsView(self.w)

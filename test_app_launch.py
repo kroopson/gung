@@ -24,7 +24,14 @@ THE SOFTWARE.
 This module holds a very basic example of a working GUNG based graph window.
 """
 
-from PySide import QtGui
+try:
+    from PySide.QtGui import QWidget
+    from PySide.QtGui import QVBoxLayout
+    from PySide.QtGui import QApplication
+except ImportError:
+    from PySide2.QtWidgets import QApplication
+    from PySide2.QtWidgets import QWidget
+    from PySide2.QtWidgets import QVBoxLayout
 
 from gung.gungview import GungGraphicsView
 from gung.gungscene import GungScene
@@ -135,13 +142,12 @@ testgung_xml_b = """<?xml version="1.0" ?>
 """
 
 if __name__ == "__main__":
-    from PySide.QtGui import QApplication
     import sys
     app = QApplication([])
 
-    w = QtGui.QWidget()
+    w = QWidget()
 
-    wlyt = QtGui.QVBoxLayout()
+    wlyt = QVBoxLayout()
     w.setLayout(wlyt)
 
     view = GungGraphicsView(w)
