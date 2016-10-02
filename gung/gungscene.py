@@ -1,28 +1,25 @@
-try:
-    from PySide.QtGui import QGraphicsItem
-    from PySide.QtGui import QPen, QBrush, QColor
-    from PySide.QtGui import QPainter, QPainterPath
-    from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
-
-    from PySide.QtCore import QPoint, QPointF, QRectF, QSize
-    from PySide.QtCore import Signal, Slot
-except ImportError:
-    from PySide2.QtWidgets import QGraphicsItem, QUndoStack
-    from PySide2.QtWidgets import QGraphicsScene
-    from PySide2.QtCore import QPoint, QPointF, QRectF, QSize
-    from PySide2.QtCore import Qt
-    from PySide2.QtCore import Signal, Slot
-    from PySide2.QtGui import QMouseEvent
-
-    from PySide2.QtGui import QPen, QBrush, QColor
-    from PySide2.QtGui import QPainter, QPainterPath
-
-from gungcommand import GungCreateGroupCommand, GungCreateEdgeCommand, GungDeleteItemsCommand, GungMoveCommand, \
-    GungDeleteEdgeCommand
-from gungcommand import GungResizeNodeCommand
-from gungnode import GungItem, GungPlug, GungNode, GungEdge, GungGroup, get_gung_node_classes
 import xml.dom.minidom as xmldom
 from xml.dom import Node
+
+from .qt.qt_core import QPointF
+from .qt.qt_core import QRectF
+from .qt.qt_core import Qt
+from .qt.qt_core import Signal
+from .qt.qt_core import Slot
+from .qt.qt_gui import QColor
+from .qt.qt_gui import QMouseEvent
+from .qt.qt_gui import QPen
+from .qt.qt_widgets import QGraphicsItem
+from .qt.qt_widgets import QGraphicsScene
+from .qt.qt_widgets import QUndoStack
+
+from gungcommand import (GungCreateGroupCommand,
+                         GungCreateEdgeCommand,
+                         GungDeleteItemsCommand,
+                         GungMoveCommand,
+                         GungDeleteEdgeCommand)
+from gungcommand import GungResizeNodeCommand
+from gungnode import GungItem, GungPlug, GungNode, GungEdge, GungGroup, get_gung_node_classes
 
 
 class GungScene(QGraphicsScene):
@@ -30,7 +27,7 @@ class GungScene(QGraphicsScene):
 
     def __init__(self, parent=None):
         QGraphicsScene.__init__(self, parent)
-        
+
         self.topZ = 0.0000
         self.topEdgeZ = 1.0000
         self.isDragging = False
@@ -39,7 +36,7 @@ class GungScene(QGraphicsScene):
         self.addItem(self.draggingEdge)
         self.nodesHaveMoved = False
         self.undoStack = QUndoStack(self)
-        
+
         self.highlighted_plugs = []
         self.removedItems = []
 
@@ -56,7 +53,7 @@ class GungScene(QGraphicsScene):
                 continue
             if 'node_id' not in item.properties.keys():
                 continue
-            
+
             current_ids.append(item.properties['node_id'])
 
         while index in current_ids:
@@ -87,11 +84,11 @@ class GungScene(QGraphicsScene):
         doc = impl.createDocument(None, "GungGraph", None)
 
         for node in self.items():
-            
+
             if isinstance(node, GungNode):
                 if not node.parentItem() is None:
                     continue
-                
+
                 xmlnode = node.as_xml(doc)
                 doc.documentElement.appendChild(xmlnode)
                 # sc = node.scene()  # I don't know why it's corrupted without it...
@@ -104,7 +101,7 @@ class GungScene(QGraphicsScene):
 
             doc.documentElement.appendChild(xmlnode)
         return doc
-    
+
     def from_xml(self, xml_string):
         """
         Parses XML string and fills the current scene with the nodes. The scene MUST be empty since
@@ -113,9 +110,9 @@ class GungScene(QGraphicsScene):
             :param str xml_string: string to parse (must be a valid xml).
         """
         dom = xmldom.parseString(xml_string)
-        
+
         classes = get_gung_node_classes()
-         
+
         for node in dom.documentElement.childNodes:
             if not node.nodeType == Node.ELEMENT_NODE:
                 continue
@@ -144,7 +141,7 @@ class GungScene(QGraphicsScene):
         self.draggingEdge.setFlag(QGraphicsItem.ItemHasNoContents, False)
         self.draggingEdge.update()
         self.parent().setCursor(Qt.ClosedHandCursor)
-        
+
     def mouseMoveEvent(self, event):
         """
         Called whenever the mouse is moved inside the viewport and ONE of mouse buttons is pressed.
@@ -185,7 +182,7 @@ class GungScene(QGraphicsScene):
         self.highlighted_plugs = temp_list
 
         return QGraphicsScene.mouseMoveEvent(self, event)
-    
+
     def mouseReleaseEvent(self, event):
         """
         Called whenever the mouse button is released after it's been clicked inside viewport.
@@ -195,11 +192,11 @@ class GungScene(QGraphicsScene):
         if self.nodesHaveMoved:
             self.check_if_nodes_moved()
             self.nodesHaveMoved = False
-            
+
         for item in self.highlighted_plugs:
             item.set_highlited(False)
         self.highlighted_plugs = []
-        
+
         return QGraphicsScene.mouseReleaseEvent(self, event)
 
     def check_if_nodes_moved(self):
@@ -207,7 +204,7 @@ class GungScene(QGraphicsScene):
         Iterate all the nodes to see if they positions changed in comparison to the
         position values that they have stored in properties dictionary
         """
-        
+
         nodes_that_have_moved = []
         for item in self.items():
             if not isinstance(item, (GungNode, GungGroup)):
@@ -236,7 +233,7 @@ class GungScene(QGraphicsScene):
 
         self.undoStack.push(undo)
         self.nodesHaveMoved = False
-        
+
     def get_plug_at_point(self, pos):
         """
         Iterate all the items that occlude with the point passed as pos and see if there is a GungPlug among them.
@@ -253,7 +250,7 @@ class GungScene(QGraphicsScene):
             if isinstance(hi, GungPlug):
                 hit_item = hi
                 break
-            
+
         return hit_item
 
     def get_node_at_point(self, pos):
@@ -280,28 +277,28 @@ class GungScene(QGraphicsScene):
         # --- no action is necessary here
         if not self.isDragging:
             return
-        
+
         # --- stop displaying the utility edge
         self.hide_dragging_edge()
-        
+
         hit_item = self.get_plug_at_point(pos)
-        
+
         # --- stop if no plug is found
         if hit_item is None:
             return
-        
+
         # --- stop if there is no item from which the dragging started
         if self.dragFrom is None:
             return
-        
+
         # --- quit if the dragging ended on the same item
         if self.dragFrom is hit_item:
             return
-        
+
         # --- check if the in-plug actually accepts connections from the GungPlug held in self.dragFrom
         if not hit_item.accepts_drop(self.dragFrom):
             return
-        
+
         # --- check it maybe there is already a connection between those plugs
         for edge in self.dragFrom.edges:
             if edge is None:
@@ -313,7 +310,7 @@ class GungScene(QGraphicsScene):
                 continue
             if self.dragFrom in [edge.item_from, edge.item_to]:
                 return
-        
+
         # --- finally create an edge
         self.create_edge_call(self.dragFrom, hit_item)
 
@@ -328,9 +325,9 @@ class GungScene(QGraphicsScene):
         if created_edge is None:
             return
         created_edge.disconnect_edge()
-        created_edge.prepareGeometryChange()        
+        created_edge.prepareGeometryChange()
         self.removeItem(created_edge)
-        
+
     def update_dragging_edge(self, pos):
         """
         Sets the new target position for the rubber edge and forces it to update
@@ -428,6 +425,7 @@ class GungDragEdge(QGraphicsItem):
     Graphics item that is responsible for displaying the rubber band edge (used to visually
     create connections).
     """
+
     def __init__(self):
         QGraphicsItem.__init__(self)
 

@@ -1,41 +1,27 @@
-try:
-    from PySide.QtGui import QGraphicsItem
-    from PySide.QtGui import QPen, QBrush, QColor
-    from PySide.QtGui import QPainter, QPainterPath
-    from PySide.QtGui import QGraphicsScene, QGraphicsItem, QUndoStack
-    from PySide.QtGui import QGraphicsView
-    from PySide.QtGui import QFont
-    from PySide.QtGui import QFontMetrics
-    from PySide.QtGui import QRubberBand
-    from PySide.QtGui import QTransform
-    from PySide.QtGui import QImage
-    from PySide.QtGui import QKeyEvent
+from .qt.qt_core import QRect
+from .qt.qt_core import QRectF
+from .qt.qt_core import QPoint
+from .qt.qt_core import QPointF
+from .qt.qt_core import Qt
+from .qt.qt_core import Signal
 
-    from PySide.QtCore import QPoint, QPointF, QRect, QRectF, QSize
-    from PySide.QtCore import Signal, Slot
-except ImportError:
-    from PySide2.QtWidgets import QGraphicsItem, QUndoStack
-    from PySide2.QtWidgets import QGraphicsScene
-    from PySide2.QtWidgets import QGraphicsView
-    from PySide2.QtCore import QPoint, QPointF, QRect, QRectF, QSize
-    from PySide2.QtCore import Qt
-    from PySide2.QtCore import Signal, Slot
-    from PySide2.QtGui import QMouseEvent
-    from PySide2.QtGui import QKeyEvent
-    from PySide2.QtGui import QFont
-    from PySide2.QtGui import QFontMetrics
-    from PySide2.QtGui import QTransform
-    from PySide2.QtWidgets import QRubberBand
-    from PySide2.QtGui import QImage
+from .qt.qt_gui import QTransform
+from .qt.qt_gui import QFont
+from .qt.qt_gui import QBrush
+from .qt.qt_gui import QColor
+from .qt.qt_gui import QMouseEvent
+from .qt.qt_gui import QPen
+from .qt.qt_gui import QImage
 
-    from PySide2.QtGui import QPen, QBrush, QColor
-    from PySide2.QtGui import QPainter, QPainterPath
+from .qt.qt_widgets import QGraphicsItem
+from .qt.qt_widgets import QGraphicsView
+from .qt.qt_widgets import QRubberBand
 
 from gungnode import GungNode, GungItem
 from gungscene import GungScene
 
 QString = str  # <- this is to keep the compatibility between PySide and PyQt
-versionString = "GUNG v.0.2.1"
+versionString = "GUNG v.0.4.0"
 
 
 class GungGraphicsView(QGraphicsView):
@@ -416,7 +402,7 @@ class GungGraphicsView(QGraphicsView):
         """
         Called whenever a keyboard button is pressed and the viewport has a keyboard focus
 
-            :param QKeyEvent event:
+            :param qt_gui.QKeyEvent event:
         """
         if event.key() == Qt.Key_F:
             self.zoom_to_selected()
@@ -439,8 +425,8 @@ class GungGraphicsView(QGraphicsView):
         """
         Called whenever the background re-paint is required. Override this in your child classes to have a custom graph
         look.
-            :param QPainter painter:
-            :param QRect rect:
+            :param qt_gui.QPainter painter:
+            :param qt_core.QRect rect:
         """
         painter.setFont(self.font)
         painter.setPen(self.text_pen)

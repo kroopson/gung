@@ -1,22 +1,19 @@
-try:
-    from PySide.QtGui import QGraphicsItem
-    from PySide.QtGui import QPen, QBrush, QColor
-    from PySide.QtGui import QPainter, QPainterPath
-
-    from PySide.QtCore import QPoint, QPointF, QRectF, QSize
-except ImportError:
-    from PySide2.QtWidgets import QGraphicsItem
-    from PySide2.QtCore import QPoint, QPointF, QRectF, QSize
-    from PySide2.QtCore import Qt
-
-    from PySide2.QtGui import QPen, QBrush, QColor
-    from PySide2.QtGui import QPainter, QPainterPath
-    
-from xml.dom import Node
 import inspect
 import sys
+from xml.dom import Node
 
 from config import GungConfig, ConfigParser
+from qt.qt_widgets import QGraphicsItem
+from .qt.qt_core import QPoint
+from .qt.qt_core import QPointF
+from .qt.qt_core import QRectF
+from .qt.qt_core import QSize
+from .qt.qt_core import Qt
+from .qt.qt_gui import QBrush
+from .qt.qt_gui import QColor
+from .qt.qt_gui import QPainter
+from .qt.qt_gui import QPainterPath
+from .qt.qt_gui import QPen
 
 config = GungConfig()
 
@@ -860,7 +857,7 @@ class GungEdge(GungItem):
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
         self.bounding_rect = QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
-                                           bottom_right_y - top_left_y)
+                                    bottom_right_y - top_left_y)
 
     def set_to_pos(self, point_to):
         self.to_pos = QPointF(point_to)
@@ -871,7 +868,7 @@ class GungEdge(GungItem):
         bottom_right_x = max(float(self.from_pos.x()), float(self.to_pos.x()))
         bottom_right_y = max(float(self.from_pos.y()), float(self.to_pos.y()))
         self.bounding_rect = QRectF(top_left_x, top_left_y, bottom_right_x - top_left_x,
-                                           bottom_right_y - top_left_y)
+                                    bottom_right_y - top_left_y)
 
     def boundingRect(self, *args, **kwargs):
         return self.bounding_rect

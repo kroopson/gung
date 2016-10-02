@@ -1,12 +1,16 @@
 import unittest
-try:
-    from PySide.QtGui import QWidget
-    from PySide.QtGui import QVBoxLayout
-    from PySide.QtGui import QApplication
-except ImportError:
-    from PySide2.QtWidgets import QApplication
-    from PySide2.QtWidgets import QWidget
-    from PySide2.QtWidgets import QVBoxLayout
+# try:
+#     from PySide.QtGui import QWidget
+#     from PySide.QtGui import QVBoxLayout
+#     from PySide.QtGui import QApplication
+# except ImportError:
+#     from PySide2.QtWidgets import QApplication
+#     from PySide2.QtWidgets import QWidget
+#     from PySide2.QtWidgets import QVBoxLayout
+from .qt.qt_widgets import QApplication
+from .qt.qt_widgets import QVBoxLayout
+from .qt.qt_widgets import QWidget
+
 
 from gung.gungview import GungGraphicsView
 from gung.gungscene import GungScene
