@@ -196,7 +196,7 @@ except ImportError:
     # noinspection PyUnresolvedReferences
     from PySide2.QtWidgets import qApp
     # noinspection PyUnresolvedReferences
-    from Pyside2.QtWidgets import (QAbstractButton,
+    from PySide2.QtWidgets import (QAbstractButton,
                                    QAbstractGraphicsShapeItem,
                                    QAbstractItemDelegate,
                                    QAbstractItemView,
